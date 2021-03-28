@@ -16,6 +16,21 @@ DEXTER_ADDRESS = sp.address("tz1aRoaRhSpRYvFdyvgWLL6TGyRoGF51wDjM")
 OVEN_REGISTRY_ADDRESS = sp.address("tz1VQnqCCqX4K5sP3FNkVSNKTdCAMJDd3E1n")
 TOKEN_ADDRESS = sp.address("tz1aJS7Pk9uWR3wWyFf1i3RwhYxN84G7stom")
 
+# An address which acts as a Fund Administrator.
+FUND_ADMINISTRATOR_ADDRESS = sp.address("tz1VmiY38m3y95HqQLjMwqnMS7sdMfGomzKi")
+
+# The address which owns an Oven
+OVEN_OWNER_ADDRESS = sp.address("tz1S8MNvuFEUsWgjHvi3AxibRBf388NhT1q2")
+
+# The address which acts as the OvenProxy.
+OVEN_PROXY_ADDRESS = sp.address("tz1c461F8GirBvq5DpFftPoPyCcPR7HQM6gm")
+
+# The address which acts as the OvenFactory
+OVEN_FACTORY_ADDRESS = sp.address("tz1irJKkXS2DBWkU1NnmFQx1c1L7pbGg4yhk")
+
+# The address which acts as an Oven
+OVEN_ADDRESS = sp.address("tz1LmaFsWRkjr7QMCx5PtV6xTUz3AmEpKQiF")
+
 # An series of named addresses with no particular role.
 # These are used for token transfer tests.
 ALICE_ADDRESS = sp.address("tz1LLNkQK4UQV6QcFShiXJ2vT2ELw449MzAA")
