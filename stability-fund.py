@@ -80,7 +80,7 @@ if __name__ == "__main__":
     MockOvenProxy = sp.import_script_from_url("file:test-helpers/mock-oven-proxy.py")
     Oven = sp.import_script_from_url("file:oven.py")
     OvenRegistry = sp.import_script_from_url("file:oven-registry.py")
-    Token = sp.import_script_from_url("file:token.py")
+    Token = sp.import_script_from_url("file:test-helpers/fa12.py")
 
     ################################################################
     # liquidate
