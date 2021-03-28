@@ -18,6 +18,7 @@ class StabilityFundContract(DevFund.DevFundContract):
         administratorContractAddress = Addresses.FUND_ADMINISTRATOR_ADDRESS,
         ovenRegistryContractAddress = Addresses.OVEN_REGISTRY_ADDRESS,
         tokenContractAddress = Addresses.TOKEN_ADDRESS,
+        savingsAccountContractAddress = Addresses.SAVINGS_ACCOUNT_ADDRESS,
     ):
         self.exception_optimization_level = "default-unit"
 
@@ -25,7 +26,8 @@ class StabilityFundContract(DevFund.DevFundContract):
             governorContractAddress = governorContractAddress,
             administratorContractAddress = administratorContractAddress,
             tokenContractAddress = tokenContractAddress,
-            ovenRegistryContractAddress = ovenRegistryContractAddress
+            ovenRegistryContractAddress = ovenRegistryContractAddress,
+            savingsAccountContractAddress = savingsAccountContractAddress
         )
 
     ################################################################
@@ -66,6 +68,14 @@ class StabilityFundContract(DevFund.DevFundContract):
 
         sp.verify(sp.sender == self.data.governorContractAddress, message = Errors.NOT_GOVERNOR)
         self.data.ovenRegistryContractAddress = newOvenRegistryContractAddress        
+
+    # Update the savings account contract.
+    @sp.entry_point
+    def setSavingsAccountContract(self, newSavingsAccountContractAddress):
+        sp.set_type(newSavingsAccountContractAddress, sp.TAddress)
+
+        sp.verify(sp.sender == self.data.governorContractAddress, message = Errors.NOT_GOVERNOR)
+        self.data.savingsAccountContractAddress = newSavingsAccountContractAddress                
 
 # Only run tests if this file is main.
 if __name__ == "__main__":
@@ -162,39 +172,37 @@ if __name__ == "__main__":
           valid = False,
       )
 
-    # TODO(keefertaylor): Enable when SmartPy supports handling `failwith` in other contracts with `valid = False`
-    # SEE: https://t.me/SmartPy_io/6538@sp.add_test(name="oven-factory-withdraw - fails when not called from oven")
-    # @sp.add_test(name="liquidate - fails if not a trusted oven")
-    # def test():
-    #     scenario = sp.test_scenario()
+    @sp.add_test(name="liquidate - fails if not a trusted oven")
+    def test():
+        scenario = sp.test_scenario()
 
-    #     # GIVEN an OvenRegistry contract
-    #     ovenFactoryAddress = Addresses.OVEN_FACTORY_ADDRESS
-    #     ovenRegistry = OvenRegistry.OvenRegistryContract(
-    #         ovenFactoryContractAddress = ovenFactoryAddress
-    #     )
-    #     scenario += ovenRegistry
+        # GIVEN an OvenRegistry contract
+        ovenFactoryAddress = Addresses.OVEN_FACTORY_ADDRESS
+        ovenRegistry = OvenRegistry.OvenRegistryContract(
+            ovenFactoryContractAddress = ovenFactoryAddress
+        )
+        scenario += ovenRegistry
 
-    #     # AND an oven which is registered
-    #     ovenAddress = Addresses.OVEN_ADDRESS
-    #     scenario += ovenRegistry.addOven((ovenAddress, ovenAddress)).run(
-    #         sender = ovenFactoryAddress
-    #     )
+        # AND an oven which is registered
+        ovenAddress = Addresses.OVEN_ADDRESS
+        scenario += ovenRegistry.addOven((ovenAddress, ovenAddress)).run(
+            sender = ovenFactoryAddress
+        )
 
-    #     # AND a StabilityFund contract
-    #     administrator = Addresses.FUND_ADMINISTRATOR_ADDRESS
-    #     fund = StabilityFundContract(
-    #         administratorContractAddress = administrator,
-    #         ovenRegistryContractAddress = ovenRegistry.address
-    #     )
-    #     scenario += fund
+        # AND a StabilityFund contract
+        administrator = Addresses.FUND_ADMINISTRATOR_ADDRESS
+        fund = StabilityFundContract(
+            administratorContractAddress = administrator,
+            ovenRegistryContractAddress = ovenRegistry.address
+        )
+        scenario += fund
 
-    #     # WHEN liquidate is passed an address which is not an oven THEN the call fails.
-    #     notOvenAddress = Addresses.NULL_ADDRESS
-    #     scenario += fund.liquidate(notOvenAddress).run(
-    #         sender = administrator,
-    #         valid = False,
-    #     )
+        # WHEN liquidate is passed an address which is not an oven THEN the call fails.
+        notOvenAddress = Addresses.NULL_ADDRESS
+        scenario += fund.liquidate(notOvenAddress).run(
+            sender = administrator,
+            valid = False,
+        )
 
     ################################################################
     # setOvenRegistryContract
@@ -237,6 +245,48 @@ if __name__ == "__main__":
             sender = Addresses.NULL_ADDRESS,
             valid = False
         )
+
+    ################################################################
+    # setSavingsAccountContract
+    ################################################################
+
+    @sp.add_test(name="setSavingsAccountContract - succeeds when called by governor")
+    def test():
+        # GIVEN an DevFund contract
+        scenario = sp.test_scenario()
+
+        governorContractAddress = Addresses.GOVERNOR_ADDRESS
+        fund = StabilityFundContract(
+            governorContractAddress = governorContractAddress
+        )
+        scenario += fund
+
+        # WHEN the setSavingsAccountContract is called with a new contract
+        rotatedAddress = Addresses.ROTATED_ADDRESS
+        scenario += fund.setSavingsAccountContract(rotatedAddress).run(
+            sender = governorContractAddress,
+        )
+
+        # THEN the contract is updated.
+        scenario.verify(fund.data.savingsAccountContractAddress == rotatedAddress)
+
+    @sp.add_test(name="setSavingsAccountContract - fails when not called by governor")
+    def test():
+        # GIVEN a DevFund contract
+        scenario = sp.test_scenario()
+
+        governorContractAddress = Addresses.GOVERNOR_ADDRESS
+        fund = StabilityFundContract(
+            governorContractAddress = governorContractAddress
+        )
+        scenario += fund
+
+        # WHEN the setSavingsAccountContract is called by someone who isn't the governor THEN the call fails
+        rotatedAddress = Addresses.ROTATED_ADDRESS
+        scenario += fund.setSavingsAccountContract(rotatedAddress).run(
+            sender = Addresses.NULL_ADDRESS,
+            valid = False
+        )        
 
     sp.add_compilation_target("stability-fund", StabilityFundContract())
             
