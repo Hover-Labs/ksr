@@ -31,6 +31,9 @@ OVEN_FACTORY_ADDRESS = sp.address("tz1irJKkXS2DBWkU1NnmFQx1c1L7pbGg4yhk")
 # The address which acts as an Oven
 OVEN_ADDRESS = sp.address("tz1LmaFsWRkjr7QMCx5PtV6xTUz3AmEpKQiF")
 
+# The address of the savings account.
+SAVINGS_ACCOUNT_ADDRESS = sp.address("tz1gfArv665EUkSg2ojMBzcbfwuPxAvqPvjo")
+
 # An series of named addresses with no particular role.
 # These are used for token transfer tests.
 ALICE_ADDRESS = sp.address("tz1LLNkQK4UQV6QcFShiXJ2vT2ELw449MzAA")
