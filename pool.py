@@ -103,6 +103,7 @@ class PoolContract(Token.FA12):
 
       # Internal State
       underlyingBalance = sp.nat(0),
+      lastInterestUpdateTime = sp.timestamp(1234),
       
       # State machinge
       state = state,
@@ -306,7 +307,34 @@ class PoolContract(Token.FA12):
   # Helpers
   ################################################################
 
-  # Compound interest via a linear approximation.
+  # Accure interest from the stability fund and return the amount accrued.
+  # TODO(keefertaylor): Test me.
+  @sp.sub_entry_point
+  def accrueInterestFromStabilityFund(self, unit):
+    sp.set_type(unit, sp.TUnit)
+
+    # Calculate Periods Elapsed
+    timeDeltaSeconds = sp.as_nat(sp.now - self.data.lastInterestIndexUpdateTime)
+    numPeriods = timeDeltaSeconds // Constants.SECONDS_PER_COMPOUND
+
+    # Calculate new interest.
+    # TODO(keefertaylor): Need to support interestRate
+    newUnderlyingBalance = self.compoundWithLinearApproximation(
+      sp.record(
+        initialValue = self.data.underlyingBalance,
+        interestRate = self.data.interestRate,
+        numPeriods = numPeriods
+      )
+    )
+
+    # Calculate the delta.
+    tokensToAccrue = sp.local('tokensToAccrue', newUnderlyingBalance - self.data.underlyingBalance)
+
+    # TODO(keefertaylor): Request a balance from stability fund
+
+    sp.result(tokensToAccrue.value)
+
+  # Compound with linear approximation and return the new value.
   @sp.global_lambda
   def compoundWithLinearApproximation(params):
     sp.set_type(params, sp.TRecord(
