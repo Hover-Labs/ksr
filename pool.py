@@ -28,7 +28,9 @@ WAITING_DEPOSIT = 3
 ################################################################
 ################################################################
 
+# TODO(keefertaylor): Consider bringing Kolibri errors into the contracts. 
 Addresses = sp.import_script_from_url("file:./test-helpers/addresses.py")
+Constants = sp.import_script_from_url("file:./common/constants.py")
 
 class PoolContract(Token.FA12):
   def __init__(
@@ -42,6 +44,9 @@ class PoolContract(Token.FA12):
 
     # The address of the stability fund.
     stabilityFundAddress = Addresses.STABILITY_FUND_ADDRESS,
+
+    # The interest rate.
+    interestRate = sp.nat(0),
 
     # The initial state of the state machine.
     state = IDLE,
@@ -101,9 +106,12 @@ class PoolContract(Token.FA12):
       stabilityFundAddress = stabilityFundAddress,
       tokenAddress = tokenAddress,
 
+      # Configuration
+      interestRate = interestRate,
+
       # Internal State
       underlyingBalance = sp.nat(0),
-      lastInterestUpdateTime = sp.timestamp(1234),
+      lastCompoundTime = sp.timestamp(1234),
       
       # State machinge
       state = state,
@@ -284,6 +292,16 @@ class PoolContract(Token.FA12):
     sp.verify(sp.sender == self.data.governorAddress, "not governor")
     self.data.stabilityFundAddress = newStabilityFundAddress   
 
+  # Update the interest rate.
+  @sp.entry_point
+  def updateInterestRate(self, newInterestRate):
+    sp.set_type(newInterestRate, sp.TNat)
+
+    sp.verify(sp.sender == self.data.governorAddress, "not governor")
+
+    # TODO(keefertaylor): Process an interest accrual here.
+    self.data.interestRate = newInterestRate   
+
   # Update contract metadata
   @sp.entry_point	
   def updateContractMetadata(self, params):	
@@ -314,30 +332,43 @@ class PoolContract(Token.FA12):
     sp.set_type(unit, sp.TUnit)
 
     # Calculate Periods Elapsed
-    # TODO(keefertaylor): Need to save last interest update time.
-    timeDeltaSeconds = sp.as_nat(sp.now - self.data.lastInterestIndexUpdateTime)
-    numPeriods = timeDeltaSeconds // Constants.SECONDS_PER_COMPOUND
+    timeDeltaSeconds = sp.as_nat(sp.now - self.data.lastCompoundTime)
+    numPeriods = sp.local('numPeriods', timeDeltaSeconds // Constants.SECONDS_PER_COMPOUND)
 
-    # Calculate new interest.
-    # TODO(keefertaylor): Need to support interestRate
-    newUnderlyingBalance = self.compoundWithLinearApproximation(
-      sp.record(
-        initialValue = self.data.underlyingBalance,
-        interestRate = self.data.interestRate,
-        numPeriods = numPeriods
+    # Update the last accrual time.
+    self.data.lastCompoundTime = self.data.lastCompoundTime.add_seconds(
+      sp.to_int(
+        numPeriods.value * Constants.SECONDS_PER_COMPOUND
       )
     )
 
-    # Calculate the delta.
-    tokensToAccrue = sp.local('tokensToAccrue', newUnderlyingBalance - self.data.underlyingBalance)
+    # Calculate new interest.
+    tokensToAccrue = self.compoundWithLinearApproximation(
+      sp.record(
+        initialValue = 0,
+        interestRate = 0,
+        numPeriods = 0,
+      )
+    )
+    
+    # self.data.underlyingBalance * (PRECISION + (numPeriods.value * self.data.interestRate)) // PRECISION
 
-    # TODO(keefertaylor): Request a balance from stability fund
+    # # Calculate the delta.
+    # tokensToAccrue = sp.local('tokensToAccrue', newUnderlyingBalance - self.data.underlyingBalance)
 
-    sp.result(tokensToAccrue.value)
+    # # Transfer interest from stability fund.
+    # stabilityFundHandle = sp.contract(
+    #   sp.TNat,
+    #   self.data.stabilityFundAddress,
+    #   "accrueInterest",
+    # ).open_some()
+    # sp.transfer(stabilityFundAddress, sp.mutez(0), tokensToAccrue.value)
+
+    # sp.result(tokensToAccrue.value)
 
   # Compound with linear approximation and return the new value.
-  @sp.global_lambda
-  def compoundWithLinearApproximation(params):
+  @sp.sub_entry_point
+  def compoundWithLinearApproximation(self, params):
     sp.set_type(params, sp.TRecord(
       initialValue = sp.TNat,
       interestRate = sp.TNat,
@@ -365,61 +396,61 @@ if __name__ == "__main__":
   # Test Helpers
   ################################################################
 
-  # A Tester flass that wraps a lambda function to allow for unit testing.
-  # See: https://smartpy.io/releases/20201220-f9f4ad18bd6ec2293f22b8c8812fefbde46d6b7d/ide?template=test_global_lambda.py
-  class Tester(sp.Contract):
-    def __init__(self, lambdaFunc):
-      self.lambdaFunc = sp.inline_result(lambdaFunc.f)
-      self.init(lambdaResult = sp.none)
+  # # A Tester flass that wraps a lambda function to allow for unit testing.
+  # # See: https://smartpy.io/releases/20201220-f9f4ad18bd6ec2293f22b8c8812fefbde46d6b7d/ide?template=test_global_lambda.py
+  # class Tester(sp.Contract):
+  #   def __init__(self, lambdaFunc):
+  #     self.lambdaFunc = sp.inline_result(lambdaFunc.f)
+  #     self.init(lambdaResult = sp.none)
 
-    @sp.entry_point
-    def test(self, params):
-      self.data.lambdaResult = sp.some(self.lambdaFunc(params))
+  #   @sp.entry_point
+  #   def test(self, params):
+  #     self.data.lambdaResult = sp.some(self.lambdaFunc(params))
 
-    @sp.entry_point
-    def check(self, params, result):
-      sp.verify(self.lambdaFunc(params) == result)
+  #   @sp.entry_point
+  #   def check(self, params, result):
+  #     sp.verify(self.lambdaFunc(params) == result)
 
-  ################################################################
-  # compoundWithLinearApproximation
-  ################################################################
+  # ################################################################
+  # # compoundWithLinearApproximation
+  # ################################################################
       
-  @sp.add_test(name="compoundWithLinearApproximation")
-  def test():
-    scenario = sp.test_scenario()
-    pool = PoolContract()
-    scenario += pool
+  # @sp.add_test(name="compoundWithLinearApproximation")
+  # def test():
+  #   scenario = sp.test_scenario()
+  #   pool = PoolContract()
+  #   scenario += pool
 
-    tester = Tester(pool.compoundWithLinearApproximation)
-    scenario += tester
+  #   tester = Tester(pool.compoundWithLinearApproximation)
+  #   scenario += tester
 
-    # Two periods back to back
-    scenario += tester.check(
-      params = sp.record(
-        initialValue = 1 * PRECISION,
-        interestRate = 100000000000000000,
-        numPeriods = 1
-      ), 
-      result = sp.nat(1100000000000000000)
-    )
-    scenario += tester.check(
-      params = sp.record(
-        initialValue = 1100000000000000000,
-        interestRate = 100000000000000000, 
-        numPeriods = 1
-      ), 
-      result = 1210000000000000000
-    )
+  #   # Two periods back to back
+  #   scenario += tester.check(
+  #     params = sp.record(
+  #       initialValue = 1 * PRECISION,
+  #       interestRate = 100000000000000000,
+  #       numPeriods = 1
+  #     ), 
+  #     result = sp.nat(1100000000000000000)
+  #   )
+  #   scenario += tester.check(
+  #     params = sp.record(
+  #       initialValue = 1100000000000000000,
+  #       interestRate = 100000000000000000, 
+  #       numPeriods = 1
+  #     ), 
+  #     result = 1210000000000000000
+  #   )
 
-    # Two periods in one update
-    scenario += tester.check(
-      params = sp.record(
-        initialValue = 1 * PRECISION,
-        interestRate = 100000000000000000, 
-        numPeriods = 2
-      ), 
-      result = 1200000000000000000
-    )
+  #   # Two periods in one update
+  #   scenario += tester.check(
+  #     params = sp.record(
+  #       initialValue = 1 * PRECISION,
+  #       interestRate = 100000000000000000, 
+  #       numPeriods = 2
+  #     ), 
+  #     result = 1200000000000000000
+  #   )
 
   ################################################################
   # updateContractMetadata
@@ -596,6 +627,44 @@ if __name__ == "__main__":
 
     # THEN the governor is rotated.
     scenario.verify(pool.data.stabilityFundAddress == Addresses.ROTATED_ADDRESS)
+
+  ################################################################
+  # updateInterestRate
+  ################################################################
+
+  @sp.add_test(name="updateInterestRate - fails if sender is not governor")
+  def test():
+    scenario = sp.test_scenario()
+
+    # GIVEN a pool contract
+    pool = PoolContract()
+    scenario += pool
+
+    # WHEN updateInterestRate is called by someone other than the governor
+    # THEN the call will fail
+    notGovernor = Addresses.NULL_ADDRESS
+    newInterestRate = sp.nat(123)
+    scenario += pool.updateInterestRate(newInterestRate).run(
+      sender = notGovernor,
+      valid = False
+    )
+
+  @sp.add_test(name="updateInterestRate - can rotate governor")
+  def test():
+    scenario = sp.test_scenario()
+
+    # GIVEN a pool contract
+    pool = PoolContract()
+    scenario += pool
+
+    # WHEN updateInterestRate is called
+    newInterestRate = sp.nat(123)
+    scenario += pool.updateInterestRate(newInterestRate).run(
+      sender = Addresses.GOVERNOR_ADDRESS,
+    )    
+
+    # THEN the governor is rotated.
+    scenario.verify(pool.data.interestRate == newInterestRate)
 
   ################################################################
   # deposit
