@@ -34,24 +34,11 @@ class PoolContract(Token.FA12):
   def __init__(
     self,
     
-    # Parent class fields
-    administrator = Addresses.ADMIN_ADDRESS,
-    paused = False,
-
     # The address of the token contract which will be deposited.
     tokenAddress = Addresses.TOKEN_ADDRESS,
 
-    # The address of the Dexter contract.
-    dexterAddress = Addresses.DEXTER_ADDRESS,
-    
-    # The address of the Oven Registry contract.
-    ovenRegistryAddress = Addresses.OVEN_REGISTRY_ADDRESS,
-
     # The governor of the pool.
     governorAddress = Addresses.GOVERNOR_ADDRESS,
-
-    # How much of the payout to reward the liquidator with.
-    rewardPercent = sp.nat(1), # 1%
 
     # The initial state of the state machine.
     state = IDLE,
@@ -107,13 +94,8 @@ class PoolContract(Token.FA12):
       token_metadata = token_metadata,
 
       # Addresses
-      dexterAddress = dexterAddress,
       governorAddress = governorAddress,
-      ovenRegistryAddress = ovenRegistryAddress,
       tokenAddress = tokenAddress,
-
-      # Configuration paramaters
-      rewardPercent = rewardPercent,
 
       # Internal State
       underlyingBalance = sp.nat(0),
@@ -288,30 +270,6 @@ class PoolContract(Token.FA12):
 
     sp.verify(sp.sender == self.data.governorAddress, "not governor")
     self.data.governorAddress = newGovernorAddress
-
-  # Update the reward percent.
-  @sp.entry_point
-  def updateRewardPercent(self, newRewardPercent):
-    sp.set_type(newRewardPercent, sp.TNat)
-
-    sp.verify(sp.sender == self.data.governorAddress, "not governor")
-    self.data.rewardPercent = newRewardPercent
-
-  # Update the dexter pool address
-  @sp.entry_point
-  def updateDexterAddress(self, newDexterAddress):
-    sp.set_type(newDexterAddress, sp.TAddress)
-
-    sp.verify(sp.sender == self.data.governorAddress, "not governor")
-    self.data.dexterAddress = newDexterAddress
-  
-  # Update the oven registry address
-  @sp.entry_point
-  def updateOvenRegistryAddress(self, newOvenRegistryAddress):
-    sp.set_type(newOvenRegistryAddress, sp.TAddress)
-
-    sp.verify(sp.sender == self.data.governorAddress, "not governor")
-    self.data.ovenRegistryAddress = newOvenRegistryAddress    
 
   # Update contract metadata
   @sp.entry_point	
@@ -525,116 +483,6 @@ if __name__ == "__main__":
       sender = Addresses.NULL_ADDRESS,
       valid = False
     )            
-
-  ################################################################
-  # updateRewardPercent
-  ################################################################
-
-  @sp.add_test(name="updateRewardPercent - fails if sender is not governor")
-  def test():
-    scenario = sp.test_scenario()
-
-    # GIVEN a pool contract
-    pool = PoolContract()
-    scenario += pool
-
-    # WHEN updateRewardPercent is called by someone other than the governor
-    # THEN the call will fail
-    notGovernor = Addresses.NULL_ADDRESS
-    newRewardPercent = sp.nat(4)
-    scenario += pool.updateRewardPercent(newRewardPercent).run(
-      sender = notGovernor,
-      valid = False
-    )
-
-  @sp.add_test(name="updateRewardPercent - can update reward amount")
-  def test():
-    scenario = sp.test_scenario()
-
-    # GIVEN a pool contract
-    pool = PoolContract()
-    scenario += pool
-
-    # WHEN updateRewardPercent is called
-    newRewardPercent = sp.nat(4)
-    scenario += pool.updateRewardPercent(newRewardPercent).run(
-      sender = Addresses.GOVERNOR_ADDRESS,
-    )    
-
-    # THEN the reward amount is updated.
-    scenario.verify(pool.data.rewardPercent == newRewardPercent)
-
-  ################################################################
-  # updateDexterAddress
-  ################################################################
-
-  @sp.add_test(name="updateDexterAddress - fails if sender is not governor")
-  def test():
-    scenario = sp.test_scenario()
-
-    # GIVEN a pool contract
-    pool = PoolContract()
-    scenario += pool
-
-    # WHEN updateDexterAddress is called by someone other than the governor
-    # THEN the call will fail
-    notGovernor = Addresses.NULL_ADDRESS
-    scenario += pool.updateDexterAddress(Addresses.ROTATED_ADDRESS).run(
-      sender = notGovernor,
-      valid = False
-    )
-
-  @sp.add_test(name="updateDexterAddress - can rotate governor")
-  def test():
-    scenario = sp.test_scenario()
-
-    # GIVEN a pool contract
-    pool = PoolContract()
-    scenario += pool
-
-    # WHEN updateDexterAddress is called
-    scenario += pool.updateDexterAddress(Addresses.ROTATED_ADDRESS).run(
-      sender = Addresses.GOVERNOR_ADDRESS,
-    )    
-
-    # THEN the dexter address is rotated.
-    scenario.verify(pool.data.dexterAddress == Addresses.ROTATED_ADDRESS)
-
-  ################################################################
-  # updateOvenRegistryAddress
-  ################################################################
-
-  @sp.add_test(name="updateOvenRegistryAddress - fails if sender is not governor")
-  def test():
-    scenario = sp.test_scenario()
-
-    # GIVEN a pool contract
-    pool = PoolContract()
-    scenario += pool
-
-    # WHEN updateOvenRegistryAddress is called by someone other than the governor
-    # THEN the call will fail
-    notGovernor = Addresses.NULL_ADDRESS
-    scenario += pool.updateOvenRegistryAddress(Addresses.ROTATED_ADDRESS).run(
-      sender = notGovernor,
-      valid = False
-    )
-
-  @sp.add_test(name="updateOvenRegistryAddress - can rotate governor")
-  def test():
-    scenario = sp.test_scenario()
-
-    # GIVEN a pool contract
-    pool = PoolContract()
-    scenario += pool
-
-    # WHEN updateOvenRegistryAddress is called
-    scenario += pool.updateOvenRegistryAddress(Addresses.ROTATED_ADDRESS).run(
-      sender = Addresses.GOVERNOR_ADDRESS,
-    )    
-
-    # THEN the dexter address is rotated.
-    scenario.verify(pool.data.ovenRegistryAddress == Addresses.ROTATED_ADDRESS)
 
   ################################################################
   # updateGovernorAddress
