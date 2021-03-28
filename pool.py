@@ -155,16 +155,6 @@ class PoolContract(Token.FA12):
     ).open_some()
     sp.transfer(tradeParam, remainingBalance, tradeHandle)
 
-    # Update token balance.
-    # NOTE: In BFS this is a no-op (the update will occur before Dexter has traded). If Florence protocol
-    # is accepted, then DFS call order will be used and this will update balance.
-    updateHandle = sp.contract(
-      sp.TUnit,
-      sp.self_address,
-      "updateBalance"
-    ).open_some()
-    sp.transfer(sp.unit, sp.mutez(0), updateHandle)
-
   # Liquidate an oven.
   @sp.entry_point
   def liquidate(self, targetAddress):
@@ -336,47 +326,6 @@ class PoolContract(Token.FA12):
     self.data.state = IDLE
     self.data.savedState_tokensToRedeem = sp.none
     self.data.savedState_redeemer = sp.none
-
-  ################################################################
-  # State Management
-  ################################################################
-
-  # Refresh the balance of the contract.
-  @sp.entry_point
-  def updateBalance(self, unit):
-    sp.set_type(unit, sp.TUnit)
-
-    # Validate state
-    sp.verify(self.data.state == IDLE, "bad state")
-
-    # Update state
-    self.data.state = WAITING_UPDATE_BALANCE
-
-    # Call token contract.
-    param = (sp.self_address, sp.self_entry_point(entry_point = 'updateBalance_callback'))
-    contractHandle = sp.contract(
-      sp.TPair(sp.TAddress, sp.TContract(sp.TNat)),
-      self.data.tokenAddress,
-      "getBalance",      
-    ).open_some()
-    sp.transfer(param, sp.mutez(0), contractHandle)
-
-  # Private callback for `updateBalance`.
-  @sp.entry_point
-  def updateBalance_callback(self, balance):
-    sp.set_type(balance, sp.TNat)
-
-    # Validate sender
-    sp.verify(sp.sender == self.data.tokenAddress, "bad sender")
-
-    # Validate state
-    sp.verify(self.data.state == WAITING_UPDATE_BALANCE, "bad state")
-
-    # Update state
-    self.data.state = IDLE
-
-    # Update balance.
-    self.data.underlyingBalance = balance
 
   ################################################################
   # Governance
@@ -863,155 +812,6 @@ if __name__ == "__main__":
     )    
     # THEN the oven is liquidated
     scenario.verify(oven.data.isLiquidated == True)
-
-  ################################################################
-  # updateBalance
-  ################################################################
-
-  @sp.add_test(name="updateBalance - updates balance")
-  def test():
-    scenario = sp.test_scenario()
-
-    # GIVEN a token contract
-    token = FA12.FA12(
-      admin = Addresses.ADMIN_ADDRESS
-    )
-    scenario += token
-
-    # AND a pool contract
-    pool = PoolContract(
-      tokenAddress = token.address
-    )
-    scenario += pool
-
-    # AnD the contract receives some tokens.
-    additionalTokens = 10
-    scenario += token.mint(
-      sp.record(
-        address = pool.address,
-        value = additionalTokens
-      )
-    ).run(
-      sender = Addresses.ADMIN_ADDRESS
-    )
-
-    # WHEN the contract updates it's balance.
-    scenario += pool.updateBalance(sp.unit)
-
-    # THEN the balance is correct.
-    scenario.verify(pool.data.underlyingBalance == additionalTokens)
-
-  @sp.add_test(name="updateBalance - fails if not in idle state")
-  def test():
-    scenario = sp.test_scenario()
-
-    # GIVEN a token contract
-    token = FA12.FA12(
-      admin = Addresses.ADMIN_ADDRESS
-    )
-    scenario += token
-
-    # AND a pool contract not in the idle state
-    pool = PoolContract(
-      tokenAddress = token.address,
-      state = WAITING_UPDATE_BALANCE,
-    )
-    scenario += pool
-
-    # AND the contract receives some tokens.
-    additionalTokens = 10
-    scenario += token.mint(
-      sp.record(
-        address = pool.address,
-        value = additionalTokens
-      )
-    ).run(
-      sender = Addresses.ADMIN_ADDRESS
-    )
-
-    # WHEN the contract updates it's balance.
-    # THEN it fails
-    scenario += pool.updateBalance(sp.unit).run(
-      valid = False
-    )
-
-  ################################################################
-  # updateBalance_callback
-  ################################################################
-
-  @sp.add_test(name="updateBalance_callback - updates balance")
-  def test():
-    scenario = sp.test_scenario()
-
-    # GIVEN a token contract
-    token = FA12.FA12(
-      admin = Addresses.ADMIN_ADDRESS
-    )
-    scenario += token
-
-    # AND a pool contract in a WAITING_UPDATE_BALANCE state
-    pool = PoolContract(
-      tokenAddress = token.address,
-      state = WAITING_UPDATE_BALANCE
-    )
-    scenario += pool
-
-    # WHEN the callback is called
-    newBalance = sp.nat(15)
-    scenario += pool.updateBalance_callback(newBalance).run(
-      sender = token.address
-    )
-
-    # THEN the balance is correct.
-    scenario.verify(pool.data.underlyingBalance == newBalance)    
-
-  @sp.add_test(name="updateBalance_callback - fails if not called from token contract")
-  def test():
-    scenario = sp.test_scenario()
-
-    # GIVEN a token contract
-    token = FA12.FA12(
-      admin = Addresses.ADMIN_ADDRESS
-    )
-    scenario += token
-
-    # AND a pool contract in a WAITING_UPDATE_BALANCE state
-    pool = PoolContract(
-      tokenAddress = token.address,
-      state = WAITING_UPDATE_BALANCE
-    )
-    scenario += pool
-
-    # WHEN the callback is called
-    newBalance = sp.nat(15)
-    scenario += pool.updateBalance_callback(newBalance).run(
-      sender = Addresses.NULL_ADDRESS,
-      valid = False
-    )
-
-  @sp.add_test(name="updateBalance_callback - fails if not called from IDLE state")
-  def test():
-    scenario = sp.test_scenario()
-
-    # GIVEN a token contract
-    token = FA12.FA12(
-      admin = Addresses.ADMIN_ADDRESS
-    )
-    scenario += token
-
-    # AND a pool contract in a IDLE state
-    pool = PoolContract(
-      tokenAddress = token.address,
-      state = IDLE
-    )
-    scenario += pool
-
-    # WHEN the callback is called
-    newBalance = sp.nat(15)
-    scenario += pool.updateBalance_callback(newBalance).run(
-      sender = token.address,
-      valid = False
-    )    
 
   ################################################################
   # default
@@ -1503,9 +1303,6 @@ if __name__ == "__main__":
       sender = Addresses.ADMIN_ADDRESS
     )
 
-    # AND the contract updates it's balance.
-    scenario += pool.updateBalance(sp.unit)
-
     # AND Charlie joins after the liquidity is added
     scenario += pool.deposit(
       charlieTokens
@@ -1625,9 +1422,6 @@ if __name__ == "__main__":
     ).run(
       sender = Addresses.ADMIN_ADDRESS
     )
-
-    # AND the contract updates it's balance.
-    scenario += pool.updateBalance(sp.unit)
 
     # AND Charlie joins after the liquidity is added
     scenario += pool.deposit(
@@ -2436,9 +2230,6 @@ if __name__ == "__main__":
       sender = Addresses.ADMIN_ADDRESS
     )
 
-    # AND the contract updates it's balance.
-    scenario += pool.updateBalance(sp.unit)
-
     # WHEN Alice withdraws her tokens
     scenario += pool.redeem(
       aliceTokens * PRECISION
@@ -2591,9 +2382,6 @@ if __name__ == "__main__":
       sender = Addresses.ADMIN_ADDRESS
     )
 
-    # AND the contract updates it's balance.
-    scenario += pool.updateBalance(sp.unit)
-
     # AND Charlie joins after the liquidity is added
     scenario += pool.deposit(
       charlieTokens
@@ -2738,9 +2526,6 @@ if __name__ == "__main__":
     ).run(
       sender = Addresses.ADMIN_ADDRESS
     )
-
-    # AND the contract updates it's balance.
-    scenario += pool.updateBalance(sp.unit)
 
     # AND Charlie joins after the liquidity is added
     scenario += pool.deposit(
