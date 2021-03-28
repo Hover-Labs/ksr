@@ -51,7 +51,7 @@ code
                         # of_some: Get-item:48 # @some : nat : @parameter%approve : pair (pair (pair (big_map address (pair (map %approvals address nat) (nat %balance))) (pair (address %dexterAddress) (address %governorAddress))) (pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)))) (pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair (nat %totalSupply) (nat %underlyingBalance))))
                       }
                       {
-                        PUSH int 48; # int : nat : @parameter%approve : pair (pair (pair (big_map address (pair (map %approvals address nat) (nat %balance))) (pair (address %dexterAddress) (address %governorAddress))) (pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)))) (pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair (nat %totalSupply) (nat %underlyingBalance))))
+                        PUSH (pair string int) (Pair "GetItem" 48); # pair string int : nat : @parameter%approve : pair (pair (pair (big_map address (pair (map %approvals address nat) (nat %balance))) (pair (address %dexterAddress) (address %governorAddress))) (pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)))) (pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair (nat %totalSupply) (nat %underlyingBalance))))
                         FAILWITH;   # FAILED
                       }; # @some : nat : @parameter%approve : pair (pair (pair (big_map address (pair (map %approvals address nat) (nat %balance))) (pair (address %dexterAddress) (address %governorAddress))) (pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)))) (pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair (nat %totalSupply) (nat %underlyingBalance))))
                     CAR;        # map address nat : nat : @parameter%approve : pair (pair (pair (big_map address (pair (map %approvals address nat) (nat %balance))) (pair (address %dexterAddress) (address %governorAddress))) (pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)))) (pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair (nat %totalSupply) (nat %underlyingBalance))))
@@ -81,7 +81,7 @@ code
                     IF
                       {}
                       {
-                        PUSH string "UnsafeAllowanceChange"; # string : @parameter%approve : pair (pair (pair (big_map address (pair (map %approvals address nat) (nat %balance))) (pair (address %dexterAddress) (address %governorAddress))) (pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)))) (pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair (nat %totalSupply) (nat %underlyingBalance))))
+                        PUSH (pair string int) (Pair "verify" 49); # pair string int : @parameter%approve : pair (pair (pair (big_map address (pair (map %approvals address nat) (nat %balance))) (pair (address %dexterAddress) (address %governorAddress))) (pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)))) (pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair (nat %totalSupply) (nat %underlyingBalance))))
                         FAILWITH;   # FAILED
                       }; # @parameter%approve : pair (pair (pair (big_map address (pair (map %approvals address nat) (nat %balance))) (pair (address %dexterAddress) (address %governorAddress))) (pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)))) (pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair (nat %totalSupply) (nat %underlyingBalance))))
                     SWAP;       # pair (pair (pair (big_map address (pair (map %approvals address nat) (nat %balance))) (pair (address %dexterAddress) (address %governorAddress))) (pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)))) (pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair (nat %totalSupply) (nat %underlyingBalance)))) : @parameter%approve
@@ -97,7 +97,7 @@ code
                     IF_SOME
                       {}
                       {
-                        PUSH int 50; # int : address : big_map address (pair (map %approvals address nat) (nat %balance)) : pair (address %dexterAddress) (address %governorAddress) : pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)) : pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair (nat %totalSupply) (nat %underlyingBalance))) : @parameter%approve
+                        PUSH (pair string int) (Pair "unzip_option" 50); # pair string int : address : big_map address (pair (map %approvals address nat) (nat %balance)) : pair (address %dexterAddress) (address %governorAddress) : pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)) : pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair (nat %totalSupply) (nat %underlyingBalance))) : @parameter%approve
                         FAILWITH;   # FAILED
                       }; # @some : address : big_map address (pair (map %approvals address nat) (nat %balance)) : pair (address %dexterAddress) (address %governorAddress) : pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)) : pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair (nat %totalSupply) (nat %underlyingBalance))) : @parameter%approve
                     UNPAIR;     # map address nat : nat : address : big_map address (pair (map %approvals address nat) (nat %balance)) : pair (address %dexterAddress) (address %governorAddress) : pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)) : pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair (nat %totalSupply) (nat %underlyingBalance))) : @parameter%approve
@@ -125,7 +125,7 @@ code
                     IF
                       {}
                       {
-                        PUSH string "WrongCondition: False | (sp.sender == sp.self_address)"; # string : @parameter%burn : @storage
+                        PUSH (pair string int) (Pair "verify" 89); # pair string int : @parameter%burn : @storage
                         FAILWITH;   # FAILED
                       }; # @parameter%burn : @storage
                     # sp.verify(self.data.balances[params.address].balance >= params.value) # @parameter%burn : @storage
@@ -143,7 +143,7 @@ code
                         # of_some: Get-item:91 # @some : nat : @parameter%burn : @storage
                       }
                       {
-                        PUSH int 91; # int : nat : @parameter%burn : @storage
+                        PUSH (pair string int) (Pair "GetItem" 91); # pair string int : nat : @parameter%burn : @storage
                         FAILWITH;   # FAILED
                       }; # @some : nat : @parameter%burn : @storage
                     CDR;        # nat : nat : @parameter%burn : @storage
@@ -152,7 +152,7 @@ code
                     IF
                       {}
                       {
-                        PUSH string "WrongCondition: self.data.balances[params.address].balance >= params.value"; # string : @parameter%burn : @storage
+                        PUSH (pair string int) (Pair "verify" 91); # pair string int : @parameter%burn : @storage
                         FAILWITH;   # FAILED
                       }; # @parameter%burn : @storage
                     SWAP;       # @storage : @parameter%burn
@@ -171,7 +171,7 @@ code
                     IF_SOME
                       {}
                       {
-                        PUSH int 92; # int : address : big_map address (pair (map %approvals address nat) (nat %balance)) : pair (address %dexterAddress) (address %governorAddress) : pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)) : pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair (nat %totalSupply) (nat %underlyingBalance))) : @parameter%burn : @storage
+                        PUSH (pair string int) (Pair "unzip_option" 92); # pair string int : address : big_map address (pair (map %approvals address nat) (nat %balance)) : pair (address %dexterAddress) (address %governorAddress) : pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)) : pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair (nat %totalSupply) (nat %underlyingBalance))) : @parameter%burn : @storage
                         FAILWITH;   # FAILED
                       }; # @some : address : big_map address (pair (map %approvals address nat) (nat %balance)) : pair (address %dexterAddress) (address %governorAddress) : pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)) : pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair (nat %totalSupply) (nat %underlyingBalance))) : @parameter%burn : @storage
                     CAR;        # map address nat : address : big_map address (pair (map %approvals address nat) (nat %balance)) : pair (address %dexterAddress) (address %governorAddress) : pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)) : pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair (nat %totalSupply) (nat %underlyingBalance))) : @parameter%burn : @storage
@@ -189,7 +189,7 @@ code
                         # of_some: Get-item:92 # @some : nat : map address nat : address : big_map address (pair (map %approvals address nat) (nat %balance)) : pair (address %dexterAddress) (address %governorAddress) : pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)) : pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair (nat %totalSupply) (nat %underlyingBalance))) : @parameter%burn
                       }
                       {
-                        PUSH int 92; # int : nat : map address nat : address : big_map address (pair (map %approvals address nat) (nat %balance)) : pair (address %dexterAddress) (address %governorAddress) : pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)) : pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair (nat %totalSupply) (nat %underlyingBalance))) : @parameter%burn
+                        PUSH (pair string int) (Pair "GetItem" 92); # pair string int : nat : map address nat : address : big_map address (pair (map %approvals address nat) (nat %balance)) : pair (address %dexterAddress) (address %governorAddress) : pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)) : pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair (nat %totalSupply) (nat %underlyingBalance))) : @parameter%burn
                         FAILWITH;   # FAILED
                       }; # @some : nat : map address nat : address : big_map address (pair (map %approvals address nat) (nat %balance)) : pair (address %dexterAddress) (address %governorAddress) : pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)) : pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair (nat %totalSupply) (nat %underlyingBalance))) : @parameter%burn
                     CDR;        # nat : nat : map address nat : address : big_map address (pair (map %approvals address nat) (nat %balance)) : pair (address %dexterAddress) (address %governorAddress) : pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)) : pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair (nat %totalSupply) (nat %underlyingBalance))) : @parameter%burn
@@ -198,7 +198,7 @@ code
                     IF_SOME
                       {}
                       {
-                        PUSH int 92; # int : map address nat : address : big_map address (pair (map %approvals address nat) (nat %balance)) : pair (address %dexterAddress) (address %governorAddress) : pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)) : pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair (nat %totalSupply) (nat %underlyingBalance))) : @parameter%burn
+                        PUSH (pair string int) (Pair "OpenVariant" 92); # pair string int : map address nat : address : big_map address (pair (map %approvals address nat) (nat %balance)) : pair (address %dexterAddress) (address %governorAddress) : pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)) : pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair (nat %totalSupply) (nat %underlyingBalance))) : @parameter%burn
                         FAILWITH;   # FAILED
                       }; # @some : map address nat : address : big_map address (pair (map %approvals address nat) (nat %balance)) : pair (address %dexterAddress) (address %governorAddress) : pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)) : pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair (nat %totalSupply) (nat %underlyingBalance))) : @parameter%burn
                     SWAP;       # map address nat : @some : address : big_map address (pair (map %approvals address nat) (nat %balance)) : pair (address %dexterAddress) (address %governorAddress) : pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)) : pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair (nat %totalSupply) (nat %underlyingBalance))) : @parameter%burn
@@ -228,7 +228,7 @@ code
                     IF_SOME
                       {}
                       {
-                        PUSH int 93; # int : nat : pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes))) : pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state)) : pair (pair (big_map address (pair (map address nat) nat)) (pair (address %dexterAddress) (address %governorAddress))) (pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)))
+                        PUSH (pair string int) (Pair "OpenVariant" 93); # pair string int : nat : pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes))) : pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state)) : pair (pair (big_map address (pair (map address nat) nat)) (pair (address %dexterAddress) (address %governorAddress))) (pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)))
                         FAILWITH;   # FAILED
                       }; # @some : nat : pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes))) : pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state)) : pair (pair (big_map address (pair (map address nat) nat)) (pair (address %dexterAddress) (address %governorAddress))) (pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)))
                     PAIR;       # pair @some nat : pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes))) : pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state)) : pair (pair (big_map address (pair (map address nat) nat)) (pair (address %dexterAddress) (address %governorAddress))) (pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)))
@@ -253,7 +253,7 @@ code
                     IF_SOME
                       {}
                       {
-                        PUSH int 140; # int : list operation : @storage
+                        PUSH (pair string int) (Pair "OpenVariant" 140); # pair string int : list operation : @storage
                         FAILWITH;   # FAILED
                       }; # @some : list operation : @storage
                     PUSH nat 100; # nat : @some : list operation : @storage
@@ -270,7 +270,7 @@ code
                         # sp.split_tokens(sp.amount, self.data.rewardPercent, 100) # @some : @some : list operation : @storage
                       }
                       {
-                        PUSH int 139; # int : @some : list operation : @storage
+                        PUSH (pair string int) (Pair "OfSome" 139); # pair string int : @some : list operation : @storage
                         FAILWITH;   # FAILED
                       }; # @some : @some : list operation : @storage
                     CAR;        # mutez : @some : list operation : @storage
@@ -289,7 +289,7 @@ code
                     IF_SOME
                       {}
                       {
-                        PUSH int 151; # int : list operation : @storage
+                        PUSH (pair string int) (Pair "OpenVariant" 151); # pair string int : list operation : @storage
                         FAILWITH;   # FAILED
                       }; # @some : list operation : @storage
                     PUSH nat 100; # nat : @some : list operation : @storage
@@ -306,7 +306,7 @@ code
                         # sp.split_tokens(sp.amount, self.data.rewardPercent, 100) # @some : @some : list operation : @storage
                       }
                       {
-                        PUSH int 139; # int : @some : list operation : @storage
+                        PUSH (pair string int) (Pair "OfSome" 139); # pair string int : @some : list operation : @storage
                         FAILWITH;   # FAILED
                       }; # @some : @some : list operation : @storage
                     CAR;        # mutez : @some : list operation : @storage
@@ -327,7 +327,7 @@ code
                     IF_SOME
                       {}
                       {
-                        PUSH int 161; # int : list operation : @storage
+                        PUSH (pair string int) (Pair "OpenVariant" 161); # pair string int : list operation : @storage
                         FAILWITH;   # FAILED
                       }; # @some : list operation : @storage
                     PUSH mutez 0; # mutez : @some : list operation : @storage
@@ -351,7 +351,7 @@ code
                         IF
                           {}
                           {
-                            PUSH string "bad state"; # string : @parameter%deposit : @storage
+                            PUSH (pair string int) (Pair "verify" 199); # pair string int : @parameter%deposit : @storage
                             FAILWITH;   # FAILED
                           }; # @parameter%deposit : @storage
                         SWAP;       # @storage : @parameter%deposit
@@ -400,7 +400,7 @@ code
                         IF_SOME
                           {}
                           {
-                            PUSH int 208; # int : pair (pair (pair (big_map %balances address (pair (map %approvals address nat) (nat %balance))) (pair (address %dexterAddress) (address %governorAddress))) (pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair nat (option address)))) (pair (pair (pair (option address) (option nat)) (pair (option nat) int)) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair (nat %totalSupply) (nat %underlyingBalance))))
+                            PUSH (pair string int) (Pair "OpenVariant" 208); # pair string int : pair (pair (pair (big_map %balances address (pair (map %approvals address nat) (nat %balance))) (pair (address %dexterAddress) (address %governorAddress))) (pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair nat (option address)))) (pair (pair (pair (option address) (option nat)) (pair (option nat) int)) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair (nat %totalSupply) (nat %underlyingBalance))))
                             FAILWITH;   # FAILED
                           }; # @some : pair (pair (pair (big_map %balances address (pair (map %approvals address nat) (nat %balance))) (pair (address %dexterAddress) (address %governorAddress))) (pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair nat (option address)))) (pair (pair (pair (option address) (option nat)) (pair (option nat) int)) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair (nat %totalSupply) (nat %underlyingBalance))))
                         NIL operation; # list operation : @some : pair (pair (pair (big_map %balances address (pair (map %approvals address nat) (nat %balance))) (pair (address %dexterAddress) (address %governorAddress))) (pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair nat (option address)))) (pair (pair (pair (option address) (option nat)) (pair (option nat) int)) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair (nat %totalSupply) (nat %underlyingBalance))))
@@ -428,7 +428,7 @@ code
                         IF
                           {}
                           {
-                            PUSH string "bad sender"; # string : @parameter%deposit_callback : @storage
+                            PUSH (pair string int) (Pair "verify" 221); # pair string int : @parameter%deposit_callback : @storage
                             FAILWITH;   # FAILED
                           }; # @parameter%deposit_callback : @storage
                         # sp.verify(self.data.state == 3, message = 'bad state') # @parameter%deposit_callback : @storage
@@ -443,7 +443,7 @@ code
                         IF
                           {}
                           {
-                            PUSH string "bad state"; # string : @parameter%deposit_callback : @storage
+                            PUSH (pair string int) (Pair "verify" 224); # pair string int : @parameter%deposit_callback : @storage
                             FAILWITH;   # FAILED
                           }; # @parameter%deposit_callback : @storage
                         SWAP;       # @storage : @parameter%deposit_callback
@@ -457,7 +457,7 @@ code
                         IF_SOME
                           {}
                           {
-                            PUSH int 227; # int : @parameter%deposit_callback : @storage
+                            PUSH (pair string int) (Pair "OpenVariant" 227); # pair string int : @parameter%deposit_callback : @storage
                             FAILWITH;   # FAILED
                           }; # @some : @parameter%deposit_callback : @storage
                         # newTokens = sp.local("newTokens", tokensToDeposit.value * 1000000000000000000) # @some : @parameter%deposit_callback : @storage
@@ -487,7 +487,7 @@ code
                                 CAR;        # nat : @some : @parameter%deposit_callback : @storage
                               }
                               {
-                                PUSH int 231; # int : @some : @parameter%deposit_callback : @storage
+                                PUSH (pair string int) (Pair "DivisionByZero" 231); # pair string int : @some : @parameter%deposit_callback : @storage
                                 FAILWITH;   # FAILED
                               }; # nat : @some : @parameter%deposit_callback : @storage
                             # newTokens.value = (fractionOfPoolOwnership.value * self.data.totalSupply) // sp.as_nat(1000000000000000000 - fractionOfPoolOwnership.value) # nat : @some : @parameter%deposit_callback : @storage
@@ -498,7 +498,7 @@ code
                             IF_SOME
                               {}
                               {
-                                PUSH int 232; # int : nat : @some : @parameter%deposit_callback : @storage
+                                PUSH (pair string int) (Pair "OpenVariant" 232); # pair string int : nat : @some : @parameter%deposit_callback : @storage
                                 FAILWITH;   # FAILED
                               }; # @some : nat : @some : @parameter%deposit_callback : @storage
                             DUP 5;      # @storage : @some : nat : @some : @parameter%deposit_callback : @storage
@@ -511,7 +511,7 @@ code
                                 CAR;        # nat : @some : @parameter%deposit_callback : @storage
                               }
                               {
-                                PUSH int 232; # int : @some : @parameter%deposit_callback : @storage
+                                PUSH (pair string int) (Pair "DivisionByZero" 232); # pair string int : @some : @parameter%deposit_callback : @storage
                                 FAILWITH;   # FAILED
                               }; # nat : @some : @parameter%deposit_callback : @storage
                           }
@@ -546,7 +546,7 @@ code
                         IF_SOME
                           {}
                           {
-                            PUSH int 238; # int : nat : @some : pair (pair (pair (big_map %balances address (pair (map %approvals address nat) (nat %balance))) (pair (address %dexterAddress) (address %governorAddress))) (pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)))) (pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair nat nat)))
+                            PUSH (pair string int) (Pair "OpenVariant" 238); # pair string int : nat : @some : pair (pair (pair (big_map %balances address (pair (map %approvals address nat) (nat %balance))) (pair (address %dexterAddress) (address %governorAddress))) (pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)))) (pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair nat nat)))
                             FAILWITH;   # FAILED
                           }; # @some : nat : @some : pair (pair (pair (big_map %balances address (pair (map %approvals address nat) (nat %balance))) (pair (address %dexterAddress) (address %governorAddress))) (pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)))) (pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair nat nat)))
                         # sp.transfer(sp.record(from_ = depositor.value, to_ = sp.self_address, value = tokensToDeposit.value), sp.tez(0), sp.contract(sp.TRecord(from_ = sp.TAddress, to_ = sp.TAddress, value = sp.TNat).layout(("from_ as from", ("to_ as to", "value"))), self.data.tokenAddress, entry_point='transfer').open_some()) # @some : nat : @some : pair (pair (pair (big_map %balances address (pair (map %approvals address nat) (nat %balance))) (pair (address %dexterAddress) (address %governorAddress))) (pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)))) (pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair nat nat)))
@@ -560,7 +560,7 @@ code
                         IF_SOME
                           {}
                           {
-                            PUSH int 244; # int : list operation : @some : nat : @some : pair (pair (pair (big_map %balances address (pair (map %approvals address nat) (nat %balance))) (pair (address %dexterAddress) (address %governorAddress))) (pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)))) (pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair nat nat)))
+                            PUSH (pair string int) (Pair "OpenVariant" 244); # pair string int : list operation : @some : nat : @some : pair (pair (pair (big_map %balances address (pair (map %approvals address nat) (nat %balance))) (pair (address %dexterAddress) (address %governorAddress))) (pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)))) (pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair nat nat)))
                             FAILWITH;   # FAILED
                           }; # @some : list operation : @some : nat : @some : pair (pair (pair (big_map %balances address (pair (map %approvals address nat) (nat %balance))) (pair (address %dexterAddress) (address %governorAddress))) (pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)))) (pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair nat nat)))
                         PUSH mutez 0; # mutez : @some : list operation : @some : nat : @some : pair (pair (pair (big_map %balances address (pair (map %approvals address nat) (nat %balance))) (pair (address %dexterAddress) (address %governorAddress))) (pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)))) (pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair nat nat)))
@@ -577,7 +577,7 @@ code
                         IF_SOME
                           {}
                           {
-                            PUSH int 256; # int : list operation : @some : nat : pair (pair (pair (big_map %balances address (pair (map %approvals address nat) (nat %balance))) (pair (address %dexterAddress) (address %governorAddress))) (pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)))) (pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair nat nat)))
+                            PUSH (pair string int) (Pair "OpenVariant" 256); # pair string int : list operation : @some : nat : pair (pair (pair (big_map %balances address (pair (map %approvals address nat) (nat %balance))) (pair (address %dexterAddress) (address %governorAddress))) (pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)))) (pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair nat nat)))
                             FAILWITH;   # FAILED
                           }; # @some : list operation : @some : nat : pair (pair (pair (big_map %balances address (pair (map %approvals address nat) (nat %balance))) (pair (address %dexterAddress) (address %governorAddress))) (pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)))) (pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair nat nat)))
                         PUSH mutez 0; # mutez : @some : list operation : @some : nat : pair (pair (pair (big_map %balances address (pair (map %approvals address nat) (nat %balance))) (pair (address %dexterAddress) (address %governorAddress))) (pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)))) (pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair nat nat)))
@@ -649,7 +649,7 @@ code
                         # of_some: Get-item:66 # @some : @parameter%getAllowance : @storage
                       }
                       {
-                        PUSH int 66; # int : @parameter%getAllowance : @storage
+                        PUSH (pair string int) (Pair "GetItem" 66); # pair string int : @parameter%getAllowance : @storage
                         FAILWITH;   # FAILED
                       }; # @some : @parameter%getAllowance : @storage
                     CAR;        # map address nat : @parameter%getAllowance : @storage
@@ -664,7 +664,7 @@ code
                         # of_some: Get-item:66 # @some : @parameter%getAllowance : @storage
                       }
                       {
-                        PUSH int 66; # int : @parameter%getAllowance : @storage
+                        PUSH (pair string int) (Pair "GetItem" 66); # pair string int : @parameter%getAllowance : @storage
                         FAILWITH;   # FAILED
                       }; # @some : @parameter%getAllowance : @storage
                     # sp.transfer(__s250.value, sp.tez(0), sp.snd(params)) # @some : @parameter%getAllowance : @storage
@@ -724,7 +724,7 @@ code
                         # of_some: Get-item:62 # @some : @parameter%getBalance : pair (pair (pair (big_map address (pair (map %approvals address nat) (nat %balance))) (pair (address %dexterAddress) (address %governorAddress))) (pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)))) (pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair (nat %totalSupply) (nat %underlyingBalance))))
                       }
                       {
-                        PUSH int 62; # int : @parameter%getBalance : pair (pair (pair (big_map address (pair (map %approvals address nat) (nat %balance))) (pair (address %dexterAddress) (address %governorAddress))) (pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)))) (pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair (nat %totalSupply) (nat %underlyingBalance))))
+                        PUSH (pair string int) (Pair "GetItem" 62); # pair string int : @parameter%getBalance : pair (pair (pair (big_map address (pair (map %approvals address nat) (nat %balance))) (pair (address %dexterAddress) (address %governorAddress))) (pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)))) (pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair (nat %totalSupply) (nat %underlyingBalance))))
                         FAILWITH;   # FAILED
                       }; # @some : @parameter%getBalance : pair (pair (pair (big_map address (pair (map %approvals address nat) (nat %balance))) (pair (address %dexterAddress) (address %governorAddress))) (pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)))) (pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair (nat %totalSupply) (nat %underlyingBalance))))
                     CDR;        # nat : @parameter%getBalance : pair (pair (pair (big_map address (pair (map %approvals address nat) (nat %balance))) (pair (address %dexterAddress) (address %governorAddress))) (pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)))) (pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair (nat %totalSupply) (nat %underlyingBalance))))
@@ -771,7 +771,7 @@ code
                         IF_SOME
                           {}
                           {
-                            PUSH int 174; # int : list operation : @parameter%liquidate : @storage
+                            PUSH (pair string int) (Pair "OpenVariant" 174); # pair string int : list operation : @parameter%liquidate : @storage
                             FAILWITH;   # FAILED
                           }; # @some : list operation : @parameter%liquidate : @storage
                         PUSH mutez 0; # mutez : @some : list operation : @parameter%liquidate : @storage
@@ -784,7 +784,7 @@ code
                         IF_SOME
                           {}
                           {
-                            PUSH int 182; # int : list operation : @storage
+                            PUSH (pair string int) (Pair "OpenVariant" 182); # pair string int : list operation : @storage
                             FAILWITH;   # FAILED
                           }; # @some : list operation : @storage
                         PUSH mutez 0; # mutez : @some : list operation : @storage
@@ -802,7 +802,7 @@ code
                         IF
                           {}
                           {
-                            PUSH string "WrongCondition: False | (sp.sender == sp.self_address)"; # string : @parameter%mint : @storage
+                            PUSH (pair string int) (Pair "verify" 78); # pair string int : @parameter%mint : @storage
                             FAILWITH;   # FAILED
                           }; # @parameter%mint : @storage
                         SWAP;       # @storage : @parameter%mint
@@ -848,7 +848,7 @@ code
                         IF_SOME
                           {}
                           {
-                            PUSH int 81; # int : address : big_map address (pair (map %approvals address nat) (nat %balance)) : pair (address %dexterAddress) (address %governorAddress) : pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)) : pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair (nat %totalSupply) (nat %underlyingBalance))) : @parameter%mint
+                            PUSH (pair string int) (Pair "unzip_option" 81); # pair string int : address : big_map address (pair (map %approvals address nat) (nat %balance)) : pair (address %dexterAddress) (address %governorAddress) : pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)) : pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair (nat %totalSupply) (nat %underlyingBalance))) : @parameter%mint
                             FAILWITH;   # FAILED
                           }; # @some : address : big_map address (pair (map %approvals address nat) (nat %balance)) : pair (address %dexterAddress) (address %governorAddress) : pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)) : pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair (nat %totalSupply) (nat %underlyingBalance))) : @parameter%mint
                         UNPAIR;     # map address nat : nat : address : big_map address (pair (map %approvals address nat) (nat %balance)) : pair (address %dexterAddress) (address %governorAddress) : pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)) : pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair (nat %totalSupply) (nat %underlyingBalance))) : @parameter%mint
@@ -906,7 +906,7 @@ code
                     IF
                       {}
                       {
-                        PUSH string "bad state"; # string : @parameter%redeem : @storage
+                        PUSH (pair string int) (Pair "verify" 274); # pair string int : @parameter%redeem : @storage
                         FAILWITH;   # FAILED
                       }; # @parameter%redeem : @storage
                     SWAP;       # @storage : @parameter%redeem
@@ -940,7 +940,7 @@ code
                     IF_SOME
                       {}
                       {
-                        PUSH int 283; # int : pair (pair (pair (big_map %balances address (pair (map %approvals address nat) (nat %balance))) (pair (address %dexterAddress) (address %governorAddress))) (pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)))) (pair (pair (pair (option address) (option nat)) (pair (option nat) int)) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair (nat %totalSupply) (nat %underlyingBalance))))
+                        PUSH (pair string int) (Pair "OpenVariant" 283); # pair string int : pair (pair (pair (big_map %balances address (pair (map %approvals address nat) (nat %balance))) (pair (address %dexterAddress) (address %governorAddress))) (pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)))) (pair (pair (pair (option address) (option nat)) (pair (option nat) int)) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair (nat %totalSupply) (nat %underlyingBalance))))
                         FAILWITH;   # FAILED
                       }; # @some : pair (pair (pair (big_map %balances address (pair (map %approvals address nat) (nat %balance))) (pair (address %dexterAddress) (address %governorAddress))) (pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)))) (pair (pair (pair (option address) (option nat)) (pair (option nat) int)) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair (nat %totalSupply) (nat %underlyingBalance))))
                     NIL operation; # list operation : @some : pair (pair (pair (big_map %balances address (pair (map %approvals address nat) (nat %balance))) (pair (address %dexterAddress) (address %governorAddress))) (pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)))) (pair (pair (pair (option address) (option nat)) (pair (option nat) int)) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair (nat %totalSupply) (nat %underlyingBalance))))
@@ -968,7 +968,7 @@ code
                     IF
                       {}
                       {
-                        PUSH string "bad sender"; # string : @parameter%redeem_callback : @storage
+                        PUSH (pair string int) (Pair "verify" 296); # pair string int : @parameter%redeem_callback : @storage
                         FAILWITH;   # FAILED
                       }; # @parameter%redeem_callback : @storage
                     # sp.verify(self.data.state == 2, message = 'bad state') # @parameter%redeem_callback : @storage
@@ -983,7 +983,7 @@ code
                     IF
                       {}
                       {
-                        PUSH string "bad state"; # string : @parameter%redeem_callback : @storage
+                        PUSH (pair string int) (Pair "verify" 299); # pair string int : @parameter%redeem_callback : @storage
                         FAILWITH;   # FAILED
                       }; # @parameter%redeem_callback : @storage
                     SWAP;       # @storage : @parameter%redeem_callback
@@ -997,7 +997,7 @@ code
                     IF_SOME
                       {}
                       {
-                        PUSH int 302; # int : @parameter%redeem_callback : @storage
+                        PUSH (pair string int) (Pair "OpenVariant" 302); # pair string int : @parameter%redeem_callback : @storage
                         FAILWITH;   # FAILED
                       }; # @some : @parameter%redeem_callback : @storage
                     # fractionOfPoolOwnership = sp.local("fractionOfPoolOwnership", (tokensToRedeem.value * 1000000000000000000) // self.data.totalSupply) # @some : @parameter%redeem_callback : @storage
@@ -1012,7 +1012,7 @@ code
                         CAR;        # nat : @some : @parameter%redeem_callback : @storage
                       }
                       {
-                        PUSH int 303; # int : @some : @parameter%redeem_callback : @storage
+                        PUSH (pair string int) (Pair "DivisionByZero" 303); # pair string int : @some : @parameter%redeem_callback : @storage
                         FAILWITH;   # FAILED
                       }; # nat : @some : @parameter%redeem_callback : @storage
                     # tokensToReceive = sp.local("tokensToReceive", (fractionOfPoolOwnership.value * params) // 1000000000000000000) # nat : @some : @parameter%redeem_callback : @storage
@@ -1026,7 +1026,7 @@ code
                         CAR;        # nat : @some : @parameter%redeem_callback : @storage
                       }
                       {
-                        PUSH int 304; # int : @some : @parameter%redeem_callback : @storage
+                        PUSH (pair string int) (Pair "DivisionByZero" 304); # pair string int : @some : @parameter%redeem_callback : @storage
                         FAILWITH;   # FAILED
                       }; # nat : @some : @parameter%redeem_callback : @storage
                     # self.data.underlyingBalance = sp.as_nat(params - tokensToReceive.value) # nat : @some : @parameter%redeem_callback : @storage
@@ -1045,7 +1045,7 @@ code
                     IF_SOME
                       {}
                       {
-                        PUSH int 307; # int : nat : pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes))) : pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state)) : pair (pair (big_map %balances address (pair (map %approvals address nat) (nat %balance))) (pair (address %dexterAddress) (address %governorAddress))) (pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address))) : nat : @some
+                        PUSH (pair string int) (Pair "OpenVariant" 307); # pair string int : nat : pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes))) : pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state)) : pair (pair (big_map %balances address (pair (map %approvals address nat) (nat %balance))) (pair (address %dexterAddress) (address %governorAddress))) (pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address))) : nat : @some
                         FAILWITH;   # FAILED
                       }; # @some : nat : pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes))) : pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state)) : pair (pair (big_map %balances address (pair (map %approvals address nat) (nat %balance))) (pair (address %dexterAddress) (address %governorAddress))) (pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address))) : nat : @some
                     SWAP;       # nat : @some : pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes))) : pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state)) : pair (pair (big_map %balances address (pair (map %approvals address nat) (nat %balance))) (pair (address %dexterAddress) (address %governorAddress))) (pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address))) : nat : @some
@@ -1066,7 +1066,7 @@ code
                     IF_SOME
                       {}
                       {
-                        PUSH int 310; # int : nat : @some : pair (pair (pair (big_map %balances address (pair (map %approvals address nat) (nat %balance))) (pair (address %dexterAddress) (address %governorAddress))) (pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)))) (pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair nat @some)))
+                        PUSH (pair string int) (Pair "OpenVariant" 310); # pair string int : nat : @some : pair (pair (pair (big_map %balances address (pair (map %approvals address nat) (nat %balance))) (pair (address %dexterAddress) (address %governorAddress))) (pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)))) (pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair nat @some)))
                         FAILWITH;   # FAILED
                       }; # @some : nat : @some : pair (pair (pair (big_map %balances address (pair (map %approvals address nat) (nat %balance))) (pair (address %dexterAddress) (address %governorAddress))) (pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)))) (pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair nat @some)))
                     # sp.transfer(sp.record(address = redeemer.value, value = tokensToRedeem.value), sp.tez(0), sp.contract(sp.TRecord(address = sp.TAddress, value = sp.TNat).layout(("address", "value")), sp.self_address, entry_point='burn').open_some()) # @some : nat : @some : pair (pair (pair (big_map %balances address (pair (map %approvals address nat) (nat %balance))) (pair (address %dexterAddress) (address %governorAddress))) (pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)))) (pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair nat @some)))
@@ -1076,7 +1076,7 @@ code
                     IF_SOME
                       {}
                       {
-                        PUSH int 315; # int : list operation : @some : nat : @some : pair (pair (pair (big_map %balances address (pair (map %approvals address nat) (nat %balance))) (pair (address %dexterAddress) (address %governorAddress))) (pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)))) (pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair nat @some)))
+                        PUSH (pair string int) (Pair "OpenVariant" 315); # pair string int : list operation : @some : nat : @some : pair (pair (pair (big_map %balances address (pair (map %approvals address nat) (nat %balance))) (pair (address %dexterAddress) (address %governorAddress))) (pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)))) (pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair nat @some)))
                         FAILWITH;   # FAILED
                       }; # @some : list operation : @some : nat : @some : pair (pair (pair (big_map %balances address (pair (map %approvals address nat) (nat %balance))) (pair (address %dexterAddress) (address %governorAddress))) (pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)))) (pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair nat @some)))
                     PUSH mutez 0; # mutez : @some : list operation : @some : nat : @some : pair (pair (pair (big_map %balances address (pair (map %approvals address nat) (nat %balance))) (pair (address %dexterAddress) (address %governorAddress))) (pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)))) (pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair nat @some)))
@@ -1095,7 +1095,7 @@ code
                     IF_SOME
                       {}
                       {
-                        PUSH int 328; # int : list operation : @some : nat : pair (pair (pair (big_map %balances address (pair (map %approvals address nat) (nat %balance))) (pair (address %dexterAddress) (address %governorAddress))) (pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)))) (pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair nat @some)))
+                        PUSH (pair string int) (Pair "OpenVariant" 328); # pair string int : list operation : @some : nat : pair (pair (pair (big_map %balances address (pair (map %approvals address nat) (nat %balance))) (pair (address %dexterAddress) (address %governorAddress))) (pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)))) (pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair nat @some)))
                         FAILWITH;   # FAILED
                       }; # @some : list operation : @some : nat : pair (pair (pair (big_map %balances address (pair (map %approvals address nat) (nat %balance))) (pair (address %dexterAddress) (address %governorAddress))) (pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)))) (pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair nat @some)))
                     PUSH mutez 0; # mutez : @some : list operation : @some : nat : pair (pair (pair (big_map %balances address (pair (map %approvals address nat) (nat %balance))) (pair (address %dexterAddress) (address %governorAddress))) (pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)))) (pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair nat @some)))
@@ -1155,7 +1155,7 @@ code
                             # of_some: Get-item:31 # @some : nat : @parameter%transfer : @storage
                           }
                           {
-                            PUSH int 31; # int : nat : @parameter%transfer : @storage
+                            PUSH (pair string int) (Pair "GetItem" 31); # pair string int : nat : @parameter%transfer : @storage
                             FAILWITH;   # FAILED
                           }; # @some : nat : @parameter%transfer : @storage
                         CAR;        # map address nat : nat : @parameter%transfer : @storage
@@ -1166,7 +1166,7 @@ code
                             # of_some: Get-item:31 # @some : nat : @parameter%transfer : @storage
                           }
                           {
-                            PUSH int 31; # int : nat : @parameter%transfer : @storage
+                            PUSH (pair string int) (Pair "GetItem" 31); # pair string int : nat : @parameter%transfer : @storage
                             FAILWITH;   # FAILED
                           }; # @some : nat : @parameter%transfer : @storage
                         COMPARE;    # int : @parameter%transfer : @storage
@@ -1175,7 +1175,7 @@ code
                     IF
                       {}
                       {
-                        PUSH string "WrongCondition: False | ((~ False) & ((params.from_ == sp.sender) | (self.data.balances[params.from_].approvals[sp.sender] >= params.value)))"; # string : @parameter%transfer : @storage
+                        PUSH (pair string int) (Pair "verify" 28); # pair string int : @parameter%transfer : @storage
                         FAILWITH;   # FAILED
                       }; # @parameter%transfer : @storage
                     SWAP;       # @storage : @parameter%transfer
@@ -1222,7 +1222,7 @@ code
                         # of_some: Get-item:33 # @some : nat : @parameter%transfer : pair (pair (pair (big_map address (pair (map %approvals address nat) (nat %balance))) (pair (address %dexterAddress) (address %governorAddress))) (pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)))) (pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair (nat %totalSupply) (nat %underlyingBalance))))
                       }
                       {
-                        PUSH int 33; # int : nat : @parameter%transfer : pair (pair (pair (big_map address (pair (map %approvals address nat) (nat %balance))) (pair (address %dexterAddress) (address %governorAddress))) (pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)))) (pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair (nat %totalSupply) (nat %underlyingBalance))))
+                        PUSH (pair string int) (Pair "GetItem" 33); # pair string int : nat : @parameter%transfer : pair (pair (pair (big_map address (pair (map %approvals address nat) (nat %balance))) (pair (address %dexterAddress) (address %governorAddress))) (pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)))) (pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair (nat %totalSupply) (nat %underlyingBalance))))
                         FAILWITH;   # FAILED
                       }; # @some : nat : @parameter%transfer : pair (pair (pair (big_map address (pair (map %approvals address nat) (nat %balance))) (pair (address %dexterAddress) (address %governorAddress))) (pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)))) (pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair (nat %totalSupply) (nat %underlyingBalance))))
                     CDR;        # nat : nat : @parameter%transfer : pair (pair (pair (big_map address (pair (map %approvals address nat) (nat %balance))) (pair (address %dexterAddress) (address %governorAddress))) (pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)))) (pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair (nat %totalSupply) (nat %underlyingBalance))))
@@ -1231,7 +1231,7 @@ code
                     IF
                       {}
                       {
-                        PUSH string "WrongCondition: self.data.balances[params.from_].balance >= params.value"; # string : @parameter%transfer : pair (pair (pair (big_map address (pair (map %approvals address nat) (nat %balance))) (pair (address %dexterAddress) (address %governorAddress))) (pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)))) (pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair (nat %totalSupply) (nat %underlyingBalance))))
+                        PUSH (pair string int) (Pair "verify" 33); # pair string int : @parameter%transfer : pair (pair (pair (big_map address (pair (map %approvals address nat) (nat %balance))) (pair (address %dexterAddress) (address %governorAddress))) (pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)))) (pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair (nat %totalSupply) (nat %underlyingBalance))))
                         FAILWITH;   # FAILED
                       }; # @parameter%transfer : pair (pair (pair (big_map address (pair (map %approvals address nat) (nat %balance))) (pair (address %dexterAddress) (address %governorAddress))) (pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)))) (pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair (nat %totalSupply) (nat %underlyingBalance))))
                     SWAP;       # pair (pair (pair (big_map address (pair (map %approvals address nat) (nat %balance))) (pair (address %dexterAddress) (address %governorAddress))) (pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)))) (pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair (nat %totalSupply) (nat %underlyingBalance)))) : @parameter%transfer
@@ -1250,7 +1250,7 @@ code
                     IF_SOME
                       {}
                       {
-                        PUSH int 34; # int : address : big_map address (pair (map %approvals address nat) (nat %balance)) : pair (address %dexterAddress) (address %governorAddress) : pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)) : pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair (nat %totalSupply) (nat %underlyingBalance))) : @parameter%transfer : pair (pair (pair (big_map address (pair (map %approvals address nat) (nat %balance))) (pair (address %dexterAddress) (address %governorAddress))) (pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)))) (pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair (nat %totalSupply) (nat %underlyingBalance))))
+                        PUSH (pair string int) (Pair "unzip_option" 34); # pair string int : address : big_map address (pair (map %approvals address nat) (nat %balance)) : pair (address %dexterAddress) (address %governorAddress) : pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)) : pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair (nat %totalSupply) (nat %underlyingBalance))) : @parameter%transfer : pair (pair (pair (big_map address (pair (map %approvals address nat) (nat %balance))) (pair (address %dexterAddress) (address %governorAddress))) (pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)))) (pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair (nat %totalSupply) (nat %underlyingBalance))))
                         FAILWITH;   # FAILED
                       }; # @some : address : big_map address (pair (map %approvals address nat) (nat %balance)) : pair (address %dexterAddress) (address %governorAddress) : pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)) : pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair (nat %totalSupply) (nat %underlyingBalance))) : @parameter%transfer : pair (pair (pair (big_map address (pair (map %approvals address nat) (nat %balance))) (pair (address %dexterAddress) (address %governorAddress))) (pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)))) (pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair (nat %totalSupply) (nat %underlyingBalance))))
                     CAR;        # map address nat : address : big_map address (pair (map %approvals address nat) (nat %balance)) : pair (address %dexterAddress) (address %governorAddress) : pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)) : pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair (nat %totalSupply) (nat %underlyingBalance))) : @parameter%transfer : pair (pair (pair (big_map address (pair (map %approvals address nat) (nat %balance))) (pair (address %dexterAddress) (address %governorAddress))) (pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)))) (pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair (nat %totalSupply) (nat %underlyingBalance))))
@@ -1268,7 +1268,7 @@ code
                         # of_some: Get-item:34 # @some : nat : map address nat : address : big_map address (pair (map %approvals address nat) (nat %balance)) : pair (address %dexterAddress) (address %governorAddress) : pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)) : pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair (nat %totalSupply) (nat %underlyingBalance))) : @parameter%transfer
                       }
                       {
-                        PUSH int 34; # int : nat : map address nat : address : big_map address (pair (map %approvals address nat) (nat %balance)) : pair (address %dexterAddress) (address %governorAddress) : pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)) : pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair (nat %totalSupply) (nat %underlyingBalance))) : @parameter%transfer
+                        PUSH (pair string int) (Pair "GetItem" 34); # pair string int : nat : map address nat : address : big_map address (pair (map %approvals address nat) (nat %balance)) : pair (address %dexterAddress) (address %governorAddress) : pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)) : pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair (nat %totalSupply) (nat %underlyingBalance))) : @parameter%transfer
                         FAILWITH;   # FAILED
                       }; # @some : nat : map address nat : address : big_map address (pair (map %approvals address nat) (nat %balance)) : pair (address %dexterAddress) (address %governorAddress) : pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)) : pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair (nat %totalSupply) (nat %underlyingBalance))) : @parameter%transfer
                     CDR;        # nat : nat : map address nat : address : big_map address (pair (map %approvals address nat) (nat %balance)) : pair (address %dexterAddress) (address %governorAddress) : pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)) : pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair (nat %totalSupply) (nat %underlyingBalance))) : @parameter%transfer
@@ -1277,7 +1277,7 @@ code
                     IF_SOME
                       {}
                       {
-                        PUSH int 34; # int : map address nat : address : big_map address (pair (map %approvals address nat) (nat %balance)) : pair (address %dexterAddress) (address %governorAddress) : pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)) : pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair (nat %totalSupply) (nat %underlyingBalance))) : @parameter%transfer
+                        PUSH (pair string int) (Pair "OpenVariant" 34); # pair string int : map address nat : address : big_map address (pair (map %approvals address nat) (nat %balance)) : pair (address %dexterAddress) (address %governorAddress) : pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)) : pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair (nat %totalSupply) (nat %underlyingBalance))) : @parameter%transfer
                         FAILWITH;   # FAILED
                       }; # @some : map address nat : address : big_map address (pair (map %approvals address nat) (nat %balance)) : pair (address %dexterAddress) (address %governorAddress) : pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)) : pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair (nat %totalSupply) (nat %underlyingBalance))) : @parameter%transfer
                     SWAP;       # map address nat : @some : address : big_map address (pair (map %approvals address nat) (nat %balance)) : pair (address %dexterAddress) (address %governorAddress) : pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)) : pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair (nat %totalSupply) (nat %underlyingBalance))) : @parameter%transfer
@@ -1295,7 +1295,7 @@ code
                     IF_SOME
                       {}
                       {
-                        PUSH int 35; # int : address : big_map address (pair (map address nat) nat) : pair (address %dexterAddress) (address %governorAddress) : pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)) : pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair (nat %totalSupply) (nat %underlyingBalance))) : @parameter%transfer
+                        PUSH (pair string int) (Pair "unzip_option" 35); # pair string int : address : big_map address (pair (map address nat) nat) : pair (address %dexterAddress) (address %governorAddress) : pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)) : pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair (nat %totalSupply) (nat %underlyingBalance))) : @parameter%transfer
                         FAILWITH;   # FAILED
                       }; # @some : address : big_map address (pair (map address nat) nat) : pair (address %dexterAddress) (address %governorAddress) : pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)) : pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair (nat %totalSupply) (nat %underlyingBalance))) : @parameter%transfer
                     UNPAIR;     # map address nat : nat : address : big_map address (pair (map address nat) nat) : pair (address %dexterAddress) (address %governorAddress) : pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)) : pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair (nat %totalSupply) (nat %underlyingBalance))) : @parameter%transfer
@@ -1336,7 +1336,7 @@ code
                         IF_SOME
                           {}
                           {
-                            PUSH int 37; # int : address : big_map address (pair (map address nat) nat) : pair (address %dexterAddress) (address %governorAddress) : pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)) : pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair (nat %totalSupply) (nat %underlyingBalance))) : @parameter%transfer : pair (pair (pair (big_map address (pair (map address nat) nat)) (pair (address %dexterAddress) (address %governorAddress))) (pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)))) (pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair (nat %totalSupply) (nat %underlyingBalance))))
+                            PUSH (pair string int) (Pair "unzip_option" 37); # pair string int : address : big_map address (pair (map address nat) nat) : pair (address %dexterAddress) (address %governorAddress) : pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)) : pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair (nat %totalSupply) (nat %underlyingBalance))) : @parameter%transfer : pair (pair (pair (big_map address (pair (map address nat) nat)) (pair (address %dexterAddress) (address %governorAddress))) (pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)))) (pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair (nat %totalSupply) (nat %underlyingBalance))))
                             FAILWITH;   # FAILED
                           }; # @some : address : big_map address (pair (map address nat) nat) : pair (address %dexterAddress) (address %governorAddress) : pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)) : pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair (nat %totalSupply) (nat %underlyingBalance))) : @parameter%transfer : pair (pair (pair (big_map address (pair (map address nat) nat)) (pair (address %dexterAddress) (address %governorAddress))) (pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)))) (pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair (nat %totalSupply) (nat %underlyingBalance))))
                         UNPAIR;     # map address nat : nat : address : big_map address (pair (map address nat) nat) : pair (address %dexterAddress) (address %governorAddress) : pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)) : pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair (nat %totalSupply) (nat %underlyingBalance))) : @parameter%transfer : pair (pair (pair (big_map address (pair (map address nat) nat)) (pair (address %dexterAddress) (address %governorAddress))) (pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)))) (pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair (nat %totalSupply) (nat %underlyingBalance))))
@@ -1354,7 +1354,7 @@ code
                             # of_some: Get-item:37 # @some : nat : map address nat : nat : address : big_map address (pair (map address nat) nat) : pair (address %dexterAddress) (address %governorAddress) : pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)) : pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair (nat %totalSupply) (nat %underlyingBalance)))
                           }
                           {
-                            PUSH int 37; # int : nat : map address nat : nat : address : big_map address (pair (map address nat) nat) : pair (address %dexterAddress) (address %governorAddress) : pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)) : pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair (nat %totalSupply) (nat %underlyingBalance)))
+                            PUSH (pair string int) (Pair "GetItem" 37); # pair string int : nat : map address nat : nat : address : big_map address (pair (map address nat) nat) : pair (address %dexterAddress) (address %governorAddress) : pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)) : pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair (nat %totalSupply) (nat %underlyingBalance)))
                             FAILWITH;   # FAILED
                           }; # @some : nat : map address nat : nat : address : big_map address (pair (map address nat) nat) : pair (address %dexterAddress) (address %governorAddress) : pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)) : pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair (nat %totalSupply) (nat %underlyingBalance)))
                         CAR;        # map address nat : nat : map address nat : nat : address : big_map address (pair (map address nat) nat) : pair (address %dexterAddress) (address %governorAddress) : pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)) : pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair (nat %totalSupply) (nat %underlyingBalance)))
@@ -1365,7 +1365,7 @@ code
                             # of_some: Get-item:37 # @some : nat : map address nat : nat : address : big_map address (pair (map address nat) nat) : pair (address %dexterAddress) (address %governorAddress) : pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)) : pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair (nat %totalSupply) (nat %underlyingBalance)))
                           }
                           {
-                            PUSH int 37; # int : nat : map address nat : nat : address : big_map address (pair (map address nat) nat) : pair (address %dexterAddress) (address %governorAddress) : pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)) : pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair (nat %totalSupply) (nat %underlyingBalance)))
+                            PUSH (pair string int) (Pair "GetItem" 37); # pair string int : nat : map address nat : nat : address : big_map address (pair (map address nat) nat) : pair (address %dexterAddress) (address %governorAddress) : pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)) : pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair (nat %totalSupply) (nat %underlyingBalance)))
                             FAILWITH;   # FAILED
                           }; # @some : nat : map address nat : nat : address : big_map address (pair (map address nat) nat) : pair (address %dexterAddress) (address %governorAddress) : pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)) : pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair (nat %totalSupply) (nat %underlyingBalance)))
                         SUB;        # int : map address nat : nat : address : big_map address (pair (map address nat) nat) : pair (address %dexterAddress) (address %governorAddress) : pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)) : pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair (nat %totalSupply) (nat %underlyingBalance)))
@@ -1373,7 +1373,7 @@ code
                         IF_SOME
                           {}
                           {
-                            PUSH int 37; # int : map address nat : nat : address : big_map address (pair (map address nat) nat) : pair (address %dexterAddress) (address %governorAddress) : pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)) : pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair (nat %totalSupply) (nat %underlyingBalance)))
+                            PUSH (pair string int) (Pair "OpenVariant" 37); # pair string int : map address nat : nat : address : big_map address (pair (map address nat) nat) : pair (address %dexterAddress) (address %governorAddress) : pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)) : pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair (nat %totalSupply) (nat %underlyingBalance)))
                             FAILWITH;   # FAILED
                           }; # @some : map address nat : nat : address : big_map address (pair (map address nat) nat) : pair (address %dexterAddress) (address %governorAddress) : pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)) : pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair (nat %totalSupply) (nat %underlyingBalance)))
                         SOME;       # option nat : map address nat : nat : address : big_map address (pair (map address nat) nat) : pair (address %dexterAddress) (address %governorAddress) : pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)) : pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option %savedState_tokensToRedeem nat) (int %state))) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair (nat %totalSupply) (nat %underlyingBalance)))
@@ -1409,7 +1409,7 @@ code
                         IF
                           {}
                           {
-                            PUSH string "bad state"; # string : @storage
+                            PUSH (pair string int) (Pair "verify" 350); # pair string int : @storage
                             FAILWITH;   # FAILED
                           }; # @storage
                         # self.data.state = 1 # @storage
@@ -1437,7 +1437,7 @@ code
                         IF_SOME
                           {}
                           {
-                            PUSH int 357; # int : pair (pair (pair (big_map %balances address (pair (map %approvals address nat) (nat %balance))) (pair (address %dexterAddress) (address %governorAddress))) (pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)))) (pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option nat) int)) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair (nat %totalSupply) (nat %underlyingBalance))))
+                            PUSH (pair string int) (Pair "OpenVariant" 357); # pair string int : pair (pair (pair (big_map %balances address (pair (map %approvals address nat) (nat %balance))) (pair (address %dexterAddress) (address %governorAddress))) (pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)))) (pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option nat) int)) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair (nat %totalSupply) (nat %underlyingBalance))))
                             FAILWITH;   # FAILED
                           }; # @some : pair (pair (pair (big_map %balances address (pair (map %approvals address nat) (nat %balance))) (pair (address %dexterAddress) (address %governorAddress))) (pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)))) (pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option nat) int)) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair (nat %totalSupply) (nat %underlyingBalance))))
                         NIL operation; # list operation : @some : pair (pair (pair (big_map %balances address (pair (map %approvals address nat) (nat %balance))) (pair (address %dexterAddress) (address %governorAddress))) (pair (pair (big_map %metadata string bytes) (address %ovenRegistryAddress)) (pair (nat %rewardPercent) (option %savedState_depositor address)))) (pair (pair (pair (option %savedState_redeemer address) (option %savedState_tokensToDeposit nat)) (pair (option nat) int)) (pair (pair (address %tokenAddress) (big_map %token_metadata nat (pair nat (map string bytes)))) (pair (nat %totalSupply) (nat %underlyingBalance))))
@@ -1465,7 +1465,7 @@ code
                         IF
                           {}
                           {
-                            PUSH string "bad sender"; # string : @parameter%updateBalance_callback : @storage
+                            PUSH (pair string int) (Pair "verify" 370); # pair string int : @parameter%updateBalance_callback : @storage
                             FAILWITH;   # FAILED
                           }; # @parameter%updateBalance_callback : @storage
                         # sp.verify(self.data.state == 1, message = 'bad state') # @parameter%updateBalance_callback : @storage
@@ -1480,7 +1480,7 @@ code
                         IF
                           {}
                           {
-                            PUSH string "bad state"; # string : @parameter%updateBalance_callback : @storage
+                            PUSH (pair string int) (Pair "verify" 373); # pair string int : @parameter%updateBalance_callback : @storage
                             FAILWITH;   # FAILED
                           }; # @parameter%updateBalance_callback : @storage
                         SWAP;       # @storage : @parameter%updateBalance_callback
@@ -1535,7 +1535,7 @@ code
                     IF
                       {}
                       {
-                        PUSH string "not governor"; # string : @parameter%updateContractMetadata : @storage
+                        PUSH (pair string int) (Pair "verify" 422); # pair string int : @parameter%updateContractMetadata : @storage
                         FAILWITH;   # FAILED
                       }; # @parameter%updateContractMetadata : @storage
                     SWAP;       # @storage : @parameter%updateContractMetadata
@@ -1575,7 +1575,7 @@ code
                         IF
                           {}
                           {
-                            PUSH string "not governor"; # string : @parameter%updateDexterAddress : @storage
+                            PUSH (pair string int) (Pair "verify" 406); # pair string int : @parameter%updateDexterAddress : @storage
                             FAILWITH;   # FAILED
                           }; # @parameter%updateDexterAddress : @storage
                         SWAP;       # @storage : @parameter%updateDexterAddress
@@ -1608,7 +1608,7 @@ code
                         IF
                           {}
                           {
-                            PUSH string "not governor"; # string : @parameter%updateGovernorAddress : @storage
+                            PUSH (pair string int) (Pair "verify" 390); # pair string int : @parameter%updateGovernorAddress : @storage
                             FAILWITH;   # FAILED
                           }; # @parameter%updateGovernorAddress : @storage
                         SWAP;       # @storage : @parameter%updateGovernorAddress
@@ -1646,7 +1646,7 @@ code
                     IF
                       {}
                       {
-                        PUSH string "not governor"; # string : @parameter%updateOvenRegistryAddress : @storage
+                        PUSH (pair string int) (Pair "verify" 414); # pair string int : @parameter%updateOvenRegistryAddress : @storage
                         FAILWITH;   # FAILED
                       }; # @parameter%updateOvenRegistryAddress : @storage
                     SWAP;       # @storage : @parameter%updateOvenRegistryAddress
@@ -1682,7 +1682,7 @@ code
                         IF
                           {}
                           {
-                            PUSH string "not governor"; # string : @parameter%updateRewardPercent : @storage
+                            PUSH (pair string int) (Pair "verify" 398); # pair string int : @parameter%updateRewardPercent : @storage
                             FAILWITH;   # FAILED
                           }; # @parameter%updateRewardPercent : @storage
                         SWAP;       # @storage : @parameter%updateRewardPercent
@@ -1717,7 +1717,7 @@ code
                         IF
                           {}
                           {
-                            PUSH string "not governor"; # string : @parameter%updateTokenMetadata : @storage
+                            PUSH (pair string int) (Pair "verify" 433); # pair string int : @parameter%updateTokenMetadata : @storage
                             FAILWITH;   # FAILED
                           }; # @parameter%updateTokenMetadata : @storage
                         SWAP;       # @storage : @parameter%updateTokenMetadata

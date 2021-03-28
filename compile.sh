@@ -3,7 +3,7 @@
 set -e -o pipefail
 
 echo "----------------------------------------"
-echo "Compiling Liquidation Pool Contracts"
+echo "Compiling Savings Rate Contracts"
 echo "----------------------------------------"
 
 # Expected location of SmartPy CLI.
@@ -13,7 +13,7 @@ SMART_PY_CLI=~/smartpy-cli/SmartPy.sh
 OUT_DIR=./.smartpy_out
 
 # Array of files to compile.
-CONTRACTS_ARRAY=( pool )
+CONTRACTS_ARRAY=( dev-fund pool stability-fund )
 
 # Ensure we have a SmartPy binary.
 if [ ! -f "$SMART_PY_CLI" ]; then
