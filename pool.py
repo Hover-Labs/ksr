@@ -270,6 +270,52 @@ class PoolContract(Token.FA12):
     self.data.savedState_tokensToRedeem = sp.none
     self.data.savedState_redeemer = sp.none
 
+  # Unsafe way to redeem a number of LP tokens for the underlying asset.
+  #
+  # Users should prefer to call redeem.
+  #
+  # This entry point does *not* accrue interest for the underlying balance. Using this entrypoint
+  # means that the calling LP will forego some of their rewards. This entry point is useful in the 
+  # case that the stability fund will not or cannot pay rewards and LPs want to extract their collateral.
+  @sp.entry_point
+  def UNSAFE_redeem(self, tokensToRedeem):
+    sp.set_type(tokensToRedeem, sp.TNat)
+
+    # Validate state
+    sp.verify(self.data.state == WAITING_DEPOSIT, "bad state")
+
+    # Calculate tokens to receive.
+    fractionOfPoolOwnership = sp.local('fractionOfPoolOwnership', (tokensToRedeem * PRECISION) / self.data.totalSupply)
+    tokensToReceive = sp.local('tokensToReceive', (fractionOfPoolOwnership.value * self.data.underlyingBalance) / PRECISION)
+
+    # Debit underlying balance by the amount of tokens that will be sent
+    self.data.underlyingBalance = sp.as_nat(self.data.underlyingBalance - tokensToReceive.value)
+
+    # Burn the tokens being redeemed.
+    tokenBurnParam = sp.record(
+      address = sp.sender, 
+      value = tokensToRedeem
+    )
+    burnHandle = sp.contract(
+      sp.TRecord(address = sp.TAddress, value = sp.TNat).layout(("address", "value")),
+      sp.self_address,
+      entry_point = 'burn',
+    ).open_some()
+    sp.transfer(tokenBurnParam, sp.mutez(0), burnHandle)
+
+    # Transfer tokens to the owner.
+    tokenTransferParam = sp.record(
+      from_ = sp.self_address,
+      to_ = sp.sender, 
+      value = tokensToReceive.value
+    )
+    transferHandle = sp.contract(
+      sp.TRecord(from_ = sp.TAddress, to_ = sp.TAddress, value = sp.TNat).layout(("from_ as from", ("to_ as to", "value"))),
+      self.data.tokenAddress,
+      "transfer"
+    ).open_some()
+    sp.transfer(tokenTransferParam, sp.mutez(0), transferHandle)
+
   ################################################################
   # Governance
   ################################################################
