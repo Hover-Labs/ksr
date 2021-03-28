@@ -28,6 +28,7 @@ WAITING_DEPOSIT = 3
 ################################################################
 ################################################################
 
+# TODO(keefertaylor): Consider bringing Kolibri errors into the contracts. 
 Addresses = sp.import_script_from_url("file:./test-helpers/addresses.py")
 
 class PoolContract(Token.FA12):
@@ -42,6 +43,9 @@ class PoolContract(Token.FA12):
 
     # The address of the stability fund.
     stabilityFundAddress = Addresses.STABILITY_FUND_ADDRESS,
+
+    # The interest rate.
+    interestRate = sp.nat(0),
 
     # The initial state of the state machine.
     state = IDLE,
@@ -100,6 +104,9 @@ class PoolContract(Token.FA12):
       governorAddress = governorAddress,
       stabilityFundAddress = stabilityFundAddress,
       tokenAddress = tokenAddress,
+
+      # Configuration
+      interestRate = interestRate,
 
       # Internal State
       underlyingBalance = sp.nat(0),
@@ -282,6 +289,16 @@ class PoolContract(Token.FA12):
 
     sp.verify(sp.sender == self.data.governorAddress, "not governor")
     self.data.stabilityFundAddress = newStabilityFundAddress   
+
+  # Update the interest rate.
+  @sp.entry_point
+  def updateInterestRate(self, newInterestRate):
+    sp.set_type(newInterestRate, sp.TNat)
+
+    sp.verify(sp.sender == self.data.governorAddress, "not governor")
+
+    # TODO(keefertaylor): Process an interest accrual here.
+    self.data.interestRate = newInterestRate   
 
   # Update contract metadata
   @sp.entry_point	
@@ -567,6 +584,44 @@ if __name__ == "__main__":
 
     # THEN the governor is rotated.
     scenario.verify(pool.data.stabilityFundAddress == Addresses.ROTATED_ADDRESS)
+
+  ################################################################
+  # updateInterestRate
+  ################################################################
+
+  @sp.add_test(name="updateInterestRate - fails if sender is not governor")
+  def test():
+    scenario = sp.test_scenario()
+
+    # GIVEN a pool contract
+    pool = PoolContract()
+    scenario += pool
+
+    # WHEN updateInterestRate is called by someone other than the governor
+    # THEN the call will fail
+    notGovernor = Addresses.NULL_ADDRESS
+    newInterestRate = sp.nat(123)
+    scenario += pool.updateInterestRate(newInterestRate).run(
+      sender = notGovernor,
+      valid = False
+    )
+
+  @sp.add_test(name="updateInterestRate - can rotate governor")
+  def test():
+    scenario = sp.test_scenario()
+
+    # GIVEN a pool contract
+    pool = PoolContract()
+    scenario += pool
+
+    # WHEN updateInterestRate is called
+    newInterestRate = sp.nat(123)
+    scenario += pool.updateInterestRate(newInterestRate).run(
+      sender = Addresses.GOVERNOR_ADDRESS,
+    )    
+
+    # THEN the governor is rotated.
+    scenario.verify(pool.data.interestRate == newInterestRate)
 
   ################################################################
   # deposit
