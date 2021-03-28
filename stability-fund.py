@@ -31,6 +31,30 @@ class StabilityFundContract(DevFund.DevFundContract):
         )
 
     ################################################################
+    # Savings Account API
+    ################################################################
+
+    @sp.entry_point
+    def accrueInterest(self, tokensAccrued):
+        sp.set_type(tokensAccrued, sp.TNat)
+
+        # Verify the caller is the savings account.
+        sp.verify(sp.sender == self.data.savingsAccountContractAddress, message = Errors.NOT_SAVINGS_ACCOUNT)
+
+        # Transfer the accrued tokens.
+        tokenTransferParam = sp.record(
+            from_ = sp.self_address,
+            to_ = self.data.savingsAccountContractAddress, 
+            value = tokensAccrued
+        )
+        transferHandle = sp.contract(
+            sp.TRecord(from_ = sp.TAddress, to_ = sp.TAddress, value = sp.TNat).layout(("from_ as from", ("to_ as to", "value"))),
+          self.data.tokenContractAddress,
+          "transfer"
+        ).open_some()
+        sp.transfer(tokenTransferParam, sp.mutez(0), transferHandle)
+
+    ################################################################
     # Administrator API
     ################################################################
 
@@ -91,6 +115,84 @@ if __name__ == "__main__":
     Oven = sp.import_script_from_url("file:oven.py")
     OvenRegistry = sp.import_script_from_url("file:oven-registry.py")
     Token = sp.import_script_from_url("file:test-helpers/fa12.py")
+
+    ################################################################
+    # accrueInterest
+    ################################################################
+
+    @sp.add_test(name="accrueInterest - can accrue interest")
+    def test():
+        scenario = sp.test_scenario()
+
+        # GIVEN a token contract.
+        token = Token.FA12(
+            admin = Addresses.ADMIN_ADDRESS
+        )
+        scenario += token
+        
+        # AND a StabilityFund contract
+        savingsAccountContractAddress = Addresses.SAVINGS_ACCOUNT_ADDRESS
+        fund = StabilityFundContract(
+            savingsAccountContractAddress = savingsAccountContractAddress,
+            tokenContractAddress = token.address
+        )
+        scenario += fund
+
+        # AND the fund owns some tokens.
+        scenario += token.mint(
+            sp.record(
+                address = fund.address,
+                value = sp.nat(1000)
+            )
+        ).run(
+            sender = Addresses.ADMIN_ADDRESS
+        )
+
+        # WHEN accrueInterest is called
+        interestAccrued = sp.nat(123)
+        scenario += fund.accrueInterest(interestAccrued).run(
+            sender = Addresses.SAVINGS_ACCOUNT_ADDRESS
+        )
+
+        # THEN the savings account receives the tokens accrues.
+        scenario.verify(token.data.balances[Addresses.SAVINGS_ACCOUNT_ADDRESS].balance == interestAccrued)
+
+    @sp.add_test(name="accrueInterest - fails if not called by savings account")
+    def test():
+        scenario = sp.test_scenario()
+
+        # GIVEN a token contract.
+        token = Token.FA12(
+            admin = Addresses.ADMIN_ADDRESS
+        )
+        scenario += token
+        
+        # AND a StabilityFund contract
+        savingsAccountContractAddress = Addresses.SAVINGS_ACCOUNT_ADDRESS
+        fund = StabilityFundContract(
+            savingsAccountContractAddress = savingsAccountContractAddress,
+            tokenContractAddress = token.address
+        )
+        scenario += fund
+
+        # AND the fund owns some tokens.
+        scenario += token.mint(
+            sp.record(
+                address = fund.address,
+                value = sp.nat(1000)
+            )
+        ).run(
+            sender = Addresses.ADMIN_ADDRESS
+        )
+
+        # WHEN accrueInterest is called by someone other than the savings accounts
+        # THEN the call fails
+        notSavingsAccount = Addresses.NULL_ADDRESS
+        interestAccrued = sp.nat(123)
+        scenario += fund.accrueInterest(interestAccrued).run(
+            sender = notSavingsAccount,
+            valid = False
+        )
 
     ################################################################
     # liquidate
