@@ -282,7 +282,7 @@ class PoolContract(Token.FA12):
     sp.set_type(tokensToRedeem, sp.TNat)
 
     # Validate state
-    sp.verify(self.data.state == WAITING_DEPOSIT, "bad state")
+    sp.verify(self.data.state == IDLE, "bad state")
 
     # Calculate tokens to receive.
     fractionOfPoolOwnership = sp.local('fractionOfPoolOwnership', (tokensToRedeem * PRECISION) / self.data.totalSupply)
@@ -2554,5 +2554,597 @@ if __name__ == "__main__":
       sender = Addresses.NULL_ADDRESS,
       valid = False
     )
+
+  ################################################################
+  # UNSAFE_redeem
+  ################################################################
+
+  @sp.add_test(name="UNSAFE_redeem - fails in bad state")
+  def test():
+    scenario = sp.test_scenario()
+
+    # GIVEN a token contract
+    token = FA12.FA12(
+      admin = Addresses.ADMIN_ADDRESS
+    )
+    scenario += token
+
+    # AND a pool contract not in the IDLE state
+    pool = PoolContract(
+      state = WAITING_REDEEM,
+      tokenAddress = token.address
+    )
+    scenario += pool
+
+    # AND Alice has tokens
+    aliceTokens = sp.nat(10)
+    scenario += token.mint(
+      sp.record(
+        address = Addresses.ALICE_ADDRESS,
+        value = aliceTokens
+      )
+    ).run(
+      sender = Addresses.ADMIN_ADDRESS
+    )
+
+    # AND Alice has LP tokens
+    scenario += pool.mint(
+      sp.record(
+        address = Addresses.ALICE_ADDRESS,
+        value = aliceTokens * PRECISION
+      )
+    ).run(
+      sender = pool.address
+    )
+
+    # WHEN Alice withdraws from the contract
+    # THEN the call fails.
+    scenario += pool.UNSAFE_redeem(
+      aliceTokens * PRECISION
+    ).run(
+      sender = Addresses.ALICE_ADDRESS,
+      valid = False
+    )
+
+  @sp.add_test(name="UNSAFE_redeem - can deposit and withdraw from one account")
+  def test():
+    scenario = sp.test_scenario()
+
+    # GIVEN a token contract
+    token = FA12.FA12(
+      admin = Addresses.ADMIN_ADDRESS
+    )
+    scenario += token
+
+    # AND a pool contract
+    pool = PoolContract(
+      tokenAddress = token.address
+    )
+    scenario += pool
+
+    # AND Alice has tokens
+    aliceTokens = sp.nat(10)
+    scenario += token.mint(
+      sp.record(
+        address = Addresses.ALICE_ADDRESS,
+        value = aliceTokens
+      )
+    ).run(
+      sender = Addresses.ADMIN_ADDRESS
+    )
+
+    # AND Alice has given the pool an allowance
+    scenario += token.approve(
+      sp.record(
+        spender = pool.address,
+        value = aliceTokens
+      )
+    ).run(
+      sender = Addresses.ALICE_ADDRESS
+    )
+
+    # AND Alice deposits tokens in the contract.
+    scenario += pool.deposit(
+      aliceTokens
+    ).run(
+      sender = Addresses.ALICE_ADDRESS
+    )
+
+    # WHEN Alice withdraws from the contract.
+    scenario += pool.UNSAFE_redeem(
+      aliceTokens * PRECISION
+    ).run(
+      sender = Addresses.ALICE_ADDRESS
+    )
+
+    # THEN Alice trades her LP tokens for her original tokens
+    scenario.verify(token.data.balances[Addresses.ALICE_ADDRESS].balance == aliceTokens)
+    scenario.verify(pool.data.balances[Addresses.ALICE_ADDRESS].balance == sp.nat(0))
+
+    # AND the total supply of tokens is as expected
+    scenario.verify(pool.data.totalSupply == sp.nat(0))
+
+    # AND the pool has possession of the correct number of tokens.
+    scenario.verify(token.data.balances[pool.address].balance == sp.nat(0))
+    scenario.verify(pool.data.underlyingBalance == sp.nat(0))
+
+  @sp.add_test(name="UNSAFE_redeem - can redeem from two accounts")
+  def test():
+    scenario = sp.test_scenario()
+
+    # GIVEN a token contract
+    token = FA12.FA12(
+      admin = Addresses.ADMIN_ADDRESS
+    )
+    scenario += token
+
+    # AND a pool contract
+    pool = PoolContract(
+      tokenAddress = token.address
+    )
+    scenario += pool
+
+    # AND Alice has tokens
+    aliceTokens = sp.nat(10)
+    scenario += token.mint(
+      sp.record(
+        address = Addresses.ALICE_ADDRESS,
+        value = aliceTokens
+      )
+    ).run(
+      sender = Addresses.ADMIN_ADDRESS
+    )
+
+    # AND Bob has twice as many tokens
+    bobTokens = sp.nat(40)
+    scenario += token.mint(
+      sp.record(
+        address = Addresses.BOB_ADDRESS,
+        value = bobTokens
+      )
+    ).run(
+      sender = Addresses.ADMIN_ADDRESS
+    )
+
+    # AND Alice has given the pool an allowance
+    scenario += token.approve(
+      sp.record(
+        spender = pool.address,
+        value = aliceTokens
+      )
+    ).run(
+      sender = Addresses.ALICE_ADDRESS
+    )
+
+    # AND Bob has given the pool an allowance
+    scenario += token.approve(
+      sp.record(
+        spender = pool.address,
+        value = bobTokens
+      )
+    ).run(
+      sender = Addresses.BOB_ADDRESS
+    )
+
+    # AND Alice and Bob deposit tokens in the contract.
+    scenario += pool.deposit(
+      aliceTokens
+    ).run(
+      sender = Addresses.ALICE_ADDRESS
+    )
+
+    scenario += pool.deposit(
+      bobTokens
+    ).run(
+      sender = Addresses.BOB_ADDRESS
+    )
+
+    # WHEN Alice withdraws her tokens
+    scenario += pool.UNSAFE_redeem(
+      aliceTokens * PRECISION
+    ).run(
+      sender = Addresses.ALICE_ADDRESS
+    )
+
+    # THEN Alice receives her original tokens back and the LP tokens are burnt
+    scenario.verify(token.data.balances[Addresses.ALICE_ADDRESS].balance == aliceTokens)
+    scenario.verify(pool.data.balances[Addresses.ALICE_ADDRESS].balance == sp.nat(0))
+
+    # AND Bob still has his position
+    scenario.verify(token.data.balances[Addresses.BOB_ADDRESS].balance == sp.nat(0))
+    scenario.verify(pool.data.balances[Addresses.BOB_ADDRESS].balance == aliceTokens * 4 * PRECISION)
+
+    # AND the total supply of tokens is as expected
+    scenario.verify(pool.data.totalSupply == bobTokens * PRECISION)
+
+    # AND the pool has possession of the correct number of tokens.
+    scenario.verify(token.data.balances[pool.address].balance == bobTokens)
+    scenario.verify(pool.data.underlyingBalance == bobTokens)
+
+    # WHEN Bob withdraws his tokens
+    scenario += pool.UNSAFE_redeem(
+      bobTokens * PRECISION
+    ).run(
+      sender = Addresses.BOB_ADDRESS
+    )
+
+    # THEN Alice retains her position
+    scenario.verify(token.data.balances[Addresses.ALICE_ADDRESS].balance == aliceTokens)
+    scenario.verify(pool.data.balances[Addresses.ALICE_ADDRESS].balance == sp.nat(0))
+
+    # AND Bob receives his original tokens back and the LP tokens are burn.
+    scenario.verify(token.data.balances[Addresses.BOB_ADDRESS].balance == bobTokens)
+    scenario.verify(pool.data.balances[Addresses.BOB_ADDRESS].balance == sp.nat(0))
+
+    # AND the total supply of tokens is as expected
+    scenario.verify(pool.data.totalSupply == sp.nat(0))
+
+    # AND the pool has possession of the correct number of tokens.
+    scenario.verify(token.data.balances[pool.address].balance == sp.nat(0))
+    scenario.verify(pool.data.underlyingBalance == sp.nat(0))
+
+  @sp.add_test(name="UNSAFE_redeem - can redeem from two accounts - reversed")
+  def test():
+    scenario = sp.test_scenario()
+
+    # GIVEN a token contract
+    token = FA12.FA12(
+      admin = Addresses.ADMIN_ADDRESS
+    )
+    scenario += token
+
+    # AND a pool contract
+    pool = PoolContract(
+      tokenAddress = token.address
+    )
+    scenario += pool
+
+    # AND Alice has tokens
+    aliceTokens = sp.nat(10)
+    scenario += token.mint(
+      sp.record(
+        address = Addresses.ALICE_ADDRESS,
+        value = aliceTokens
+      )
+    ).run(
+      sender = Addresses.ADMIN_ADDRESS
+    )
+
+    # AND Bob has twice as many tokens
+    bobTokens = sp.nat(40)
+    scenario += token.mint(
+      sp.record(
+        address = Addresses.BOB_ADDRESS,
+        value = bobTokens
+      )
+    ).run(
+      sender = Addresses.ADMIN_ADDRESS
+    )
+
+    # AND Alice has given the pool an allowance
+    scenario += token.approve(
+      sp.record(
+        spender = pool.address,
+        value = aliceTokens
+      )
+    ).run(
+      sender = Addresses.ALICE_ADDRESS
+    )
+
+    # AND Bob has given the pool an allowance
+    scenario += token.approve(
+      sp.record(
+        spender = pool.address,
+        value = bobTokens
+      )
+    ).run(
+      sender = Addresses.BOB_ADDRESS
+    )
+
+    # AND Alice and Bob deposit tokens in the contract.
+    scenario += pool.deposit(
+      aliceTokens
+    ).run(
+      sender = Addresses.ALICE_ADDRESS
+    )
+
+    scenario += pool.deposit(
+      bobTokens
+    ).run(
+      sender = Addresses.BOB_ADDRESS
+    )
+
+    # WHEN Bob withdraws his tokens
+    scenario += pool.UNSAFE_redeem(
+      bobTokens * PRECISION
+    ).run(
+      sender = Addresses.BOB_ADDRESS
+    )
+
+    # THEN Alice retains her position
+    scenario.verify(token.data.balances[Addresses.ALICE_ADDRESS].balance == sp.nat(0))
+    scenario.verify(pool.data.balances[Addresses.ALICE_ADDRESS].balance == aliceTokens * PRECISION)
+
+    # AND Bob receives his original tokens back and the LP tokens are burn.
+    scenario.verify(token.data.balances[Addresses.BOB_ADDRESS].balance == bobTokens)
+    scenario.verify(pool.data.balances[Addresses.BOB_ADDRESS].balance == sp.nat(0))
+
+    # AND the total supply of tokens is as expected
+    scenario.verify(pool.data.totalSupply == aliceTokens * PRECISION)
+
+    # AND the pool has possession of the correct number of tokens.
+    scenario.verify(token.data.balances[pool.address].balance == aliceTokens)
+    scenario.verify(pool.data.underlyingBalance == aliceTokens)
+
+    # WHEN Alice withdraws her tokens
+    scenario += pool.UNSAFE_redeem(
+      aliceTokens * PRECISION
+    ).run(
+      sender = Addresses.ALICE_ADDRESS
+    )
+
+    # THEN Alice receives her original tokens back and the LP tokens are burnt
+    scenario.verify(token.data.balances[Addresses.ALICE_ADDRESS].balance == aliceTokens)
+    scenario.verify(pool.data.balances[Addresses.ALICE_ADDRESS].balance == sp.nat(0))
+
+    # AND Bob still has his position
+    scenario.verify(token.data.balances[Addresses.BOB_ADDRESS].balance == bobTokens)
+    scenario.verify(pool.data.balances[Addresses.BOB_ADDRESS].balance == sp.nat(0))
+
+    # AND the total supply of tokens is as expected
+    scenario.verify(pool.data.totalSupply == sp.nat(0))
+
+    # AND the pool has possession of the correct number of tokens.
+    scenario.verify(token.data.balances[pool.address].balance == sp.nat(0))
+    scenario.verify(pool.data.underlyingBalance == sp.nat(0))
+
+  @sp.add_test(name="UNSAFE_redeem - can redeem partially from two accounts")
+  def test():
+    scenario = sp.test_scenario()
+
+    # GIVEN a token contract
+    token = FA12.FA12(
+      admin = Addresses.ADMIN_ADDRESS
+    )
+    scenario += token
+
+    # AND a pool contract
+    pool = PoolContract(
+      tokenAddress = token.address
+    )
+    scenario += pool
+
+    # AND Alice has tokens
+    aliceTokens = sp.nat(10)
+    scenario += token.mint(
+      sp.record(
+        address = Addresses.ALICE_ADDRESS,
+        value = aliceTokens
+      )
+    ).run(
+      sender = Addresses.ADMIN_ADDRESS
+    )
+
+    # AND Bob has twice as many tokens
+    bobTokens = sp.nat(40)
+    scenario += token.mint(
+      sp.record(
+        address = Addresses.BOB_ADDRESS,
+        value = bobTokens
+      )
+    ).run(
+      sender = Addresses.ADMIN_ADDRESS
+    )
+
+    # AND Alice has given the pool an allowance
+    scenario += token.approve(
+      sp.record(
+        spender = pool.address,
+        value = aliceTokens
+      )
+    ).run(
+      sender = Addresses.ALICE_ADDRESS
+    )
+
+    # AND Bob has given the pool an allowance
+    scenario += token.approve(
+      sp.record(
+        spender = pool.address,
+        value = bobTokens
+      )
+    ).run(
+      sender = Addresses.BOB_ADDRESS
+    )
+
+    # AND Alice and Bob deposit tokens in the contract.
+    scenario += pool.deposit(
+      aliceTokens
+    ).run(
+      sender = Addresses.ALICE_ADDRESS
+    )
+
+    scenario += pool.deposit(
+      bobTokens
+    ).run(
+      sender = Addresses.BOB_ADDRESS
+    )
+
+    # WHEN Alice withdraws half of her tokens
+    scenario += pool.UNSAFE_redeem(
+      aliceTokens / 2 * PRECISION
+    ).run(
+      sender = Addresses.ALICE_ADDRESS
+    )
+
+    # THEN Alice receives her original tokens back and the LP tokens are burnt
+    scenario.verify(token.data.balances[Addresses.ALICE_ADDRESS].balance == aliceTokens / 2)
+    scenario.verify(pool.data.balances[Addresses.ALICE_ADDRESS].balance == aliceTokens / 2 * PRECISION)
+
+    # AND Bob still has his position
+    scenario.verify(token.data.balances[Addresses.BOB_ADDRESS].balance == sp.nat(0))
+    scenario.verify(pool.data.balances[Addresses.BOB_ADDRESS].balance == aliceTokens * 4 * PRECISION)
+
+    # AND the total supply of tokens is as expected
+    scenario.verify(pool.data.totalSupply == (bobTokens + (aliceTokens / 2)) * PRECISION)
+
+    # AND the pool has possession of the correct number of tokens.
+    scenario.verify(token.data.balances[pool.address].balance == bobTokens + (aliceTokens / 2))
+    scenario.verify(pool.data.underlyingBalance == bobTokens + (aliceTokens / 2))
+
+    # WHEN Bob withdraws a quarter of his tokens
+    scenario += pool.UNSAFE_redeem(
+      bobTokens / 4 * PRECISION
+    ).run(
+      sender = Addresses.BOB_ADDRESS
+    )
+
+    # THEN Alice retains her position
+    scenario.verify(token.data.balances[Addresses.ALICE_ADDRESS].balance == aliceTokens / 2)
+    scenario.verify(pool.data.balances[Addresses.ALICE_ADDRESS].balance == aliceTokens / 2 * PRECISION)
+
+    # AND Bob receives his original tokens back and the LP tokens are burn.
+    scenario.verify(token.data.balances[Addresses.BOB_ADDRESS].balance == 9) # Bob withdraws 22% (10/45) of the pool, which is 9.9999 tokens. Integer math truncates the remainder
+    scenario.verify(pool.data.balances[Addresses.BOB_ADDRESS].balance == 30 * PRECISION) # Bob withdrew 1/4 of tokens = .25 * 40 = 30
+
+    # AND the total supply of tokens is as expected
+    # Expected = 50 tokens generated - 5 tokens alice redeemed - 10 tokens bob redeemed
+    scenario.verify(pool.data.totalSupply == sp.nat(35) * PRECISION)
+
+    # AND the pool has possession of the correct number of tokens.
+    # Expected:
+    # 1/2 of alice tokens + 3/4 of bob tokens + 1 token rounding error = 5 + 30 + 1 = 36
+    expectedRemainingTokens = sp.nat(36)
+    scenario.verify(token.data.balances[pool.address].balance == expectedRemainingTokens) 
+    scenario.verify(pool.data.underlyingBalance == expectedRemainingTokens)
+
+  @sp.add_test(name="UNSAFE_redeem - can redeem from two accounts with liquidity added")
+  def test():
+    scenario = sp.test_scenario()
+
+    # GIVEN a token contract
+    token = FA12.FA12(
+      admin = Addresses.ADMIN_ADDRESS
+    )
+    scenario += token
+
+    # AND a pool contract
+    pool = PoolContract(
+      tokenAddress = token.address
+    )
+    scenario += pool
+
+    # AND Alice has tokens
+    aliceTokens = sp.nat(10)
+    scenario += token.mint(
+      sp.record(
+        address = Addresses.ALICE_ADDRESS,
+        value = aliceTokens
+      )
+    ).run(
+      sender = Addresses.ADMIN_ADDRESS
+    )
+
+    # AND Bob has twice as many tokens
+    bobTokens = sp.nat(40)
+    scenario += token.mint(
+      sp.record(
+        address = Addresses.BOB_ADDRESS,
+        value = bobTokens
+      )
+    ).run(
+      sender = Addresses.ADMIN_ADDRESS
+    )
+
+    # AND Alice has given the pool an allowance
+    scenario += token.approve(
+      sp.record(
+        spender = pool.address,
+        value = aliceTokens
+      )
+    ).run(
+      sender = Addresses.ALICE_ADDRESS
+    )
+
+    # AND Bob has given the pool an allowance
+    scenario += token.approve(
+      sp.record(
+        spender = pool.address,
+        value = bobTokens
+      )
+    ).run(
+      sender = Addresses.BOB_ADDRESS
+    )
+
+    # AND Alice and Bob deposit tokens in the contract.
+    scenario += pool.deposit(
+      aliceTokens
+    ).run(
+      sender = Addresses.ALICE_ADDRESS
+    )
+
+    scenario += pool.deposit(
+      bobTokens
+    ).run(
+      sender = Addresses.BOB_ADDRESS
+    )
+
+    # AND the contract receives an additional number of tokens.
+    additionalTokens = 10
+    scenario += token.mint(
+      sp.record(
+        address = pool.address,
+        value = additionalTokens
+      )
+    ).run(
+      sender = Addresses.ADMIN_ADDRESS
+    )
+
+    # WHEN Alice withdraws her tokens
+    scenario += pool.UNSAFE_redeem(
+      aliceTokens * PRECISION
+    ).run(
+      sender = Addresses.ALICE_ADDRESS
+    )
+
+    # THEN Alice receives only her original tokens
+    scenario.verify(token.data.balances[Addresses.ALICE_ADDRESS].balance == aliceTokens)
+    scenario.verify(pool.data.balances[Addresses.ALICE_ADDRESS].balance == sp.nat(0))
+
+    # AND Bob still has his position
+    scenario.verify(token.data.balances[Addresses.BOB_ADDRESS].balance == sp.nat(0))
+    scenario.verify(pool.data.balances[Addresses.BOB_ADDRESS].balance == aliceTokens * 4 * PRECISION)
+
+    # AND the total supply of tokens is as expected
+    scenario.verify(pool.data.totalSupply == bobTokens * PRECISION)
+
+    # AND the pool has possession of the correct number of tokens.
+    scenario.verify(token.data.balances[pool.address].balance == bobTokens + additionalTokens)
+
+    # AND the pool has not yet balanced the additional tokens
+    scenario.verify(pool.data.underlyingBalance == bobTokens)
+
+    # WHEN Bob withdraws his tokens
+    scenario += pool.UNSAFE_redeem(
+      bobTokens * PRECISION
+    ).run(
+      sender = Addresses.BOB_ADDRESS
+    )
+
+    # THEN Alice retains her position
+    scenario.verify(token.data.balances[Addresses.ALICE_ADDRESS].balance == aliceTokens)
+    scenario.verify(pool.data.balances[Addresses.ALICE_ADDRESS].balance == sp.nat(0))
+
+    # AND Bob receives his original tokens back
+    scenario.verify(token.data.balances[Addresses.BOB_ADDRESS].balance == bobTokens)
+    scenario.verify(pool.data.balances[Addresses.BOB_ADDRESS].balance == sp.nat(0))
+
+    # AND the total supply of tokens is as expected
+    scenario.verify(pool.data.totalSupply == sp.nat(0))
+
+    # AND the pool has possession of the correct number of tokens.
+    scenario.verify(token.data.balances[pool.address].balance == sp.nat(10))
+
+    # AND the pool thinks it has 0 tokens
+    scenario.verify(pool.data.underlyingBalance == sp.nat(0))
 
   sp.add_compilation_target("pool", PoolContract())
