@@ -66,9 +66,9 @@ class PoolContract(Token.FA12):
 
     token_metadata = sp.map(
       l = {
-        "name": sp.bytes('0x446578746572204c69717569646174696e67206b555344'), # Dexter Liquidating kUSD
+        "name": sp.bytes('0x496e7465726573742042656172696e67206b555344'), # Interest Bearing kUSD
         "decimals": sp.bytes('0x3138'), # 18
-        "symbol": sp.bytes('0x6465787465724c6b555344'), # dexterLkUSD
+        "symbol": sp.bytes('0x69626b555344'), # ibkUSD
         "icon": sp.bytes('0x2068747470733a2f2f6b6f6c696272692d646174612e73332e616d617a6f6e6177732e636f6d2f6c6f676f2e706e67') # https://kolibri-data.s3.amazonaws.com/logo.png
       },
       tkey = sp.TString,
@@ -84,8 +84,8 @@ class PoolContract(Token.FA12):
     )
         
     # Hexadecimal representation of:
-    # { "name": "Dexter Liquidating kUSD",  "description": "kUSD Liquidation Pool tied to Dexter",  "authors": ["Hover Labs <hello@hover.engineering>"],  "homepage":  "https://kolibri.finance" }
-    metadata_data = sp.bytes('0x7b20226e616d65223a2022446578746572204c69717569646174696e67206b555344222c2020226465736372697074696f6e223a20226b555344204c69717569646174696f6e20506f6f6c207469656420746f20446578746572222c202022617574686f7273223a205b22486f766572204c616273203c68656c6c6f40686f7665722e656e67696e656572696e673e225d2c202022686f6d6570616765223a20202268747470733a2f2f6b6f6c696272692e66696e616e636522207d')
+    # { "name": "Interest Bearing kUSD",  "description": "Interest Bearing kUSD",  "authors": ["Hover Labs <hello@hover.engineering>"],  "homepage":  "https://kolibri.finance" }
+    metadata_data = sp.bytes('0x7b20226e616d65223a2022496e7465726573742042656172696e67206b555344222c2020226465736372697074696f6e223a2022496e7465726573742042656172696e67206b555344222c202022617574686f7273223a205b22486f766572204c616273203c68656c6c6f40686f7665722e656e67696e656572696e673e225d2c202022686f6d6570616765223a20202268747470733a2f2f6b6f6c696272692e66696e616e636522207d')
     metadata = sp.big_map(
       l = {
         "": sp.bytes('0x74657a6f732d73746f726167653a64617461'), # "tezos-storage:data"
