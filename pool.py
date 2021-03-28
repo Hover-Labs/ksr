@@ -40,6 +40,9 @@ class PoolContract(Token.FA12):
     # The governor of the pool.
     governorAddress = Addresses.GOVERNOR_ADDRESS,
 
+    # The address of the stability fund.
+    stabilityFundAddress = Addresses.STABILITY_FUND_ADDRESS,
+
     # The initial state of the state machine.
     state = IDLE,
 
@@ -95,6 +98,7 @@ class PoolContract(Token.FA12):
 
       # Addresses
       governorAddress = governorAddress,
+      stabilityFundAddress = stabilityFundAddress,
       tokenAddress = tokenAddress,
 
       # Internal State
@@ -270,6 +274,14 @@ class PoolContract(Token.FA12):
 
     sp.verify(sp.sender == self.data.governorAddress, "not governor")
     self.data.governorAddress = newGovernorAddress
+
+  # Update the stability fund address.
+  @sp.entry_point
+  def updateStabilityFundAddress(self, newStabilityFundAddress):
+    sp.set_type(newStabilityFundAddress, sp.TAddress)
+
+    sp.verify(sp.sender == self.data.governorAddress, "not governor")
+    self.data.stabilityFundAddress = newStabilityFundAddress   
 
   # Update contract metadata
   @sp.entry_point	
@@ -519,6 +531,42 @@ if __name__ == "__main__":
 
     # THEN the governor is rotated.
     scenario.verify(pool.data.governorAddress == Addresses.ROTATED_ADDRESS)
+
+  ################################################################
+  # updateStabilityFundAddress
+  ################################################################
+
+  @sp.add_test(name="updateStabilityFundAddress - fails if sender is not governor")
+  def test():
+    scenario = sp.test_scenario()
+
+    # GIVEN a pool contract
+    pool = PoolContract()
+    scenario += pool
+
+    # WHEN updateStabilityFundAddress is called by someone other than the governor
+    # THEN the call will fail
+    notGovernor = Addresses.NULL_ADDRESS
+    scenario += pool.updateStabilityFundAddress(Addresses.ROTATED_ADDRESS).run(
+      sender = notGovernor,
+      valid = False
+    )
+
+  @sp.add_test(name="updateStabilityFundAddress - can rotate governor")
+  def test():
+    scenario = sp.test_scenario()
+
+    # GIVEN a pool contract
+    pool = PoolContract()
+    scenario += pool
+
+    # WHEN updateStabilityFundAddress is called
+    scenario += pool.updateStabilityFundAddress(Addresses.ROTATED_ADDRESS).run(
+      sender = Addresses.GOVERNOR_ADDRESS,
+    )    
+
+    # THEN the governor is rotated.
+    scenario.verify(pool.data.stabilityFundAddress == Addresses.ROTATED_ADDRESS)
 
   ################################################################
   # deposit
