@@ -314,6 +314,7 @@ class PoolContract(Token.FA12):
     sp.set_type(unit, sp.TUnit)
 
     # Calculate Periods Elapsed
+    # TODO(keefertaylor): Need to save last interest update time.
     timeDeltaSeconds = sp.as_nat(sp.now - self.data.lastInterestIndexUpdateTime)
     numPeriods = timeDeltaSeconds // Constants.SECONDS_PER_COMPOUND
 
