@@ -1101,7 +1101,7 @@ if __name__ == "__main__":
 
     # WHEN the interest rate is adjusted after one period
     newInterestRate = sp.nat(123)
-    scenario += pool.updateInterestRate(sp.unit).run(
+    scenario += pool.updateInterestRate(newInterestRate).run(
       sender = Addresses.GOVERNOR_ADDRESS,
       now = sp.timestamp(Constants.SECONDS_PER_COMPOUND)
     )
