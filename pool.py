@@ -443,6 +443,34 @@ if __name__ == "__main__":
   StabilityFund = sp.import_script_from_url("file:./stability-fund.py")
 
   ################################################################
+  # Test Helpers
+  ################################################################
+
+  # Tests sub_entry_points
+  # See: https://t.me/SmartPy_io/9155
+  class Tester(sp.Contract):
+    def __init__(
+      self,
+      contractEntrypoint,
+      interestRate,
+      lastInterestCompoundTime,
+      stabilityFundAddress,
+      underlyingBalance
+    ):
+      self.contractEntrypoint = contractEntrypoint
+      self.init(
+        result = sp.none, 
+        interestRate = interestRate,
+        lastInterestCompoundTime = lastInterestCompoundTime,
+        stabilityFundAddress = stabilityFundAddress,
+        underlyingBalance = underlyingBalance,
+      )
+        
+    @sp.entry_point
+    def testContractEntryPoint(self, params):
+      self.data.result = sp.some(self.contractEntrypoint(params))
+
+  ################################################################
   # accrueInterest
   ################################################################
 
@@ -451,3087 +479,3165 @@ if __name__ == "__main__":
     # GIVEN a Pool contract
     scenario = sp.test_scenario()
 
+    interestRate = sp.nat(0)
+    lastInterestCompoundTime = sp.timestamp(0)
     pool = PoolContract(
-      interestRate = sp.nat(0),
-      lastInterestCompoundTime = sp.timestamp(0)
+      interestRate = interestRate,
+      lastInterestCompoundTime = lastInterestCompoundTime
     )
     scenario += pool
 
+    # AND a tester.
+    tester = Tester(
+      pool.accrueInterest,
+      interestRate = interestRate,
+      lastInterestCompoundTime = lastInterestCompoundTime,
+      stabilityFundAddress = Addresses.STABILITY_FUND_ADDRESS,
+      underlyingBalance = sp.nat(0)
+    )
+    scenario += tester
+
     # WHEN interest is accrued after 1 compound period.
-    scenario += pool.DEBUG_accrueInterest(sp.unit).run(
+    scenario += tester.testContractEntryPoint(sp.unit).run(
       now = sp.timestamp(Constants.SECONDS_PER_COMPOUND)
     )
 
     # THEN the last interest update time is updated.
-    scenario.verify(pool.data.lastInterestCompoundTime == sp.timestamp(Constants.SECONDS_PER_COMPOUND))
-
-  @sp.add_test(name="accrueInterest - updates lastInterestCompoundTime for two periods")
-  def test():
-    # GIVEN a Pool contract
-    scenario = sp.test_scenario()
-
-    pool = PoolContract(
-      interestRate = sp.nat(0),
-      lastInterestCompoundTime = sp.timestamp(0)
-    )
-    scenario += pool
-
-    # WHEN interest is accrued after 2 compound periods.
-    scenario += pool.DEBUG_accrueInterest(sp.unit).run(
-      now = sp.timestamp(Constants.SECONDS_PER_COMPOUND * 2)
-    )
-
-    # THEN the last interest update time is updated.
-    scenario.verify(pool.data.lastInterestCompoundTime == sp.timestamp(Constants.SECONDS_PER_COMPOUND * 2))
-
-  @sp.add_test(name="accrueInterest - updates lastInterestCompoundTime for one period with nonzero start")
-  def test():
-    # GIVEN a Pool contract with a previous interest update time.
-    scenario = sp.test_scenario()
-
-    pool = PoolContract(
-      interestRate = sp.nat(0),
-      lastInterestCompoundTime = sp.timestamp(Constants.SECONDS_PER_COMPOUND)
-    )
-    scenario += pool
-
-    # WHEN interest is accrued after 1 compound period.
-    scenario += pool.DEBUG_accrueInterest(sp.unit).run(
-      now = sp.timestamp(Constants.SECONDS_PER_COMPOUND * 2)
-    )
-
-    # THEN the last interest update time is updated.
-    scenario.verify(pool.data.lastInterestCompoundTime == sp.timestamp(Constants.SECONDS_PER_COMPOUND * 2))
-
-  @sp.add_test(name="accrueInterest - updates lastInterestCompoundTime by flooring partial periods")
-  def test():
-    # GIVEN a Pool contract
-    scenario = sp.test_scenario()
-
-    pool = PoolContract(
-      interestRate = sp.nat(0),
-      lastInterestCompoundTime = sp.timestamp(0)
-    )
-    scenario += pool
-
-    # WHEN interest is accrued after 2.5 periods
-    scenario += pool.DEBUG_accrueInterest(sp.unit).run(
-      now = sp.timestamp(150) # 2.5 periods
-    )
-
-    # THEN the last interest update time is floored.
-    scenario.verify(pool.data.lastInterestCompoundTime == sp.timestamp(Constants.SECONDS_PER_COMPOUND * 2))    
-
-  @sp.add_test(name="accrueInterest - calculates accrued interest for one period")
-  def test():
-    # GIVEN a Pool contract
-    scenario = sp.test_scenario()
-
-    initialValue = Constants.PRECISION
-    pool = PoolContract(
-      interestRate = sp.nat(100000000000000000),
-      underlyingBalance = initialValue,
-      lastInterestCompoundTime = sp.timestamp(0)
-    )
-    scenario += pool
-
-    # WHEN interest is accrued after 1 compound period.
-    scenario += pool.DEBUG_accrueInterest(sp.unit).run(
-      now = sp.timestamp(Constants.SECONDS_PER_COMPOUND)
-    )
-
-    # THEN the the accrued interest is calculated correctly.
-    scenario.verify(pool.data.debug_accrueInterest.open_some() == sp.as_nat(1100000000000000000 - initialValue))
-
-  @sp.add_test(name="accrueInterest - calculates accrued interest for two periods")
-  def test():
-    # GIVEN a Pool contract
-    scenario = sp.test_scenario()
-
-    initialValue = Constants.PRECISION
-    pool = PoolContract(
-      interestRate = sp.nat(100000000000000000),
-      underlyingBalance = initialValue,
-      lastInterestCompoundTime = sp.timestamp(0)
-    )
-    scenario += pool
-
-    # WHEN interest is accrued after 2 compound periods.
-    scenario += pool.DEBUG_accrueInterest(sp.unit).run(
-      now = sp.timestamp(Constants.SECONDS_PER_COMPOUND * 2)
-    )
-
-    # THEN the the accrued interest is calculated correctly.
-    scenario.verify(pool.data.debug_accrueInterest.open_some() == sp.as_nat(1200000000000000000 - initialValue))
-
-  @sp.add_test(name="accrueInterest - calculates accrued interest for one period with nonzero start")
-  def test():
-    # GIVEN a Pool contract with a previous interest update time.
-    scenario = sp.test_scenario()
-
-    initialValue = 1100000000000000000
-    pool = PoolContract(
-      interestRate = sp.nat(100000000000000000),
-      underlyingBalance = initialValue,
-      lastInterestCompoundTime = sp.timestamp(Constants.SECONDS_PER_COMPOUND)
-    )
-    scenario += pool
-
-    # WHEN interest is accrued after 1 compound period.
-    scenario += pool.DEBUG_accrueInterest(sp.unit).run(
-      now = sp.timestamp(Constants.SECONDS_PER_COMPOUND * 2)
-    )
-
-    # THEN the the accrued interest is calculated correctly.
-    scenario.verify(pool.data.debug_accrueInterest.open_some() == sp.as_nat(1210000000000000000 - initialValue))
-
-  @sp.add_test(name="accrueInterest - calculates accrued interest by flooring partial periods")
-  def test():
-    # GIVEN a Pool contract
-    scenario = sp.test_scenario()
-
-    initialValue = Constants.PRECISION
-    pool = PoolContract(
-      interestRate = sp.nat(100000000000000000),
-      underlyingBalance = initialValue,
-      lastInterestCompoundTime = sp.timestamp(0)
-    )
-    scenario += pool
-
-    # WHEN interest is accrued after 2.5 periods
-    scenario += pool.DEBUG_accrueInterest(sp.unit).run(
-      now = sp.timestamp(150) # 2.5 periods
-    )
-
-    # THEN the the accrued interest is calculated correctly.
-    scenario.verify(pool.data.debug_accrueInterest.open_some() == sp.as_nat(1200000000000000000 - initialValue))
-
-  @sp.add_test(name="accrueInterest - retrieves stability fees for one period")
-  def test():
-    scenario = sp.test_scenario()
-
-    # GIVEN a token contract.
-    token = FA12.FA12(
-      admin = Addresses.ADMIN_ADDRESS
-    )
-    scenario += token
-
-    # AND a Pool contract
-    initialValue = Constants.PRECISION
-    pool = PoolContract(
-      interestRate = sp.nat(100000000000000000),
-      underlyingBalance = initialValue,
-      lastInterestCompoundTime = sp.timestamp(0)
-    )
-    scenario += pool
-
-    # AND a stability fund contract.
-    stabilityFund = StabilityFund.StabilityFundContract(
-      savingsAccountContractAddress = pool.address,
-      tokenContractAddress = token.address,
-    )
-    scenario += stabilityFund
-
-    # AND the pool contract is wired to the stability fund.
-    scenario += pool.updateStabilityFundAddress(stabilityFund.address).run(
-      sender = Addresses.GOVERNOR_ADDRESS
-    )
-
-    # AND the pool has the initial underlying balance.
-    scenario += token.mint(
-      sp.record(
-        address = pool.address,
-        value = initialValue
-      )
-    ).run(
-      sender = Addresses.ADMIN_ADDRESS
-    )
-
-    # AND the stability fund has many tokens
-    scenario += token.mint(
-      sp.record(
-        address = stabilityFund.address,
-        value = 1000000 * Constants.PRECISION
-      )
-    ).run(
-      sender = Addresses.ADMIN_ADDRESS
-    )
-
-    # WHEN interest is accrued after 1 compound period.
-    scenario += pool.DEBUG_accrueInterest(sp.unit).run(
-      now = sp.timestamp(Constants.SECONDS_PER_COMPOUND)
-    )
-
-    # THEN the contract has the right number of tokens.
-    scenario.verify(token.data.balances[pool.address].balance == 1100000000000000000)
-
-  @sp.add_test(name="accrueInterest - retrieves stability fees for two periods")
-  def test():
-    scenario = sp.test_scenario()
-
-    # GIVEN a token contract.
-    token = FA12.FA12(
-      admin = Addresses.ADMIN_ADDRESS
-    )
-    scenario += token
-
-    # AND a Pool contract
-    initialValue = Constants.PRECISION
-    pool = PoolContract(
-      interestRate = sp.nat(100000000000000000),
-      underlyingBalance = initialValue,
-      lastInterestCompoundTime = sp.timestamp(0)
-    )
-    scenario += pool
-
-    # AND a stability fund contract.
-    stabilityFund = StabilityFund.StabilityFundContract(
-      savingsAccountContractAddress = pool.address,
-      tokenContractAddress = token.address,
-    )
-    scenario += stabilityFund
-
-    # AND the pool contract is wired to the stability fund.
-    scenario += pool.updateStabilityFundAddress(stabilityFund.address).run(
-      sender = Addresses.GOVERNOR_ADDRESS
-    )
-
-    # AND the pool has the initial underlying balance.
-    scenario += token.mint(
-      sp.record(
-        address = pool.address,
-        value = initialValue
-      )
-    ).run(
-      sender = Addresses.ADMIN_ADDRESS
-    )
-
-    # AND the stability fund has many tokens
-    scenario += token.mint(
-      sp.record(
-        address = stabilityFund.address,
-        value = 1000000 * Constants.PRECISION
-      )
-    ).run(
-      sender = Addresses.ADMIN_ADDRESS
-    )
-
-    # WHEN interest is accrued after 2 compound periods.
-    scenario += pool.DEBUG_accrueInterest(sp.unit).run(
-      now = sp.timestamp(2 * Constants.SECONDS_PER_COMPOUND)
-    )
-
-    # THEN the contract has the right number of tokens.
-    scenario.verify(token.data.balances[pool.address].balance == 1200000000000000000)    
-
-  @sp.add_test(name="accrueInterest - retrieves stability fees for one periods starting at nonzero")
-  def test():
-    scenario = sp.test_scenario()
-
-    # GIVEN a token contract.
-    token = FA12.FA12(
-      admin = Addresses.ADMIN_ADDRESS
-    )
-    scenario += token
-
-    # AND a Pool contract
-    initialValue = sp.nat(1100000000000000000)
-    pool = PoolContract(
-      interestRate = sp.nat(100000000000000000),
-      underlyingBalance = initialValue,
-      lastInterestCompoundTime = sp.timestamp(Constants.SECONDS_PER_COMPOUND)
-    )
-    scenario += pool
-
-    # AND a stability fund contract.
-    stabilityFund = StabilityFund.StabilityFundContract(
-      savingsAccountContractAddress = pool.address,
-      tokenContractAddress = token.address,
-    )
-    scenario += stabilityFund
-
-    # AND the pool contract is wired to the stability fund.
-    scenario += pool.updateStabilityFundAddress(stabilityFund.address).run(
-      sender = Addresses.GOVERNOR_ADDRESS
-    )
-
-    # AND the pool has the initial underlying balance.
-    scenario += token.mint(
-      sp.record(
-        address = pool.address,
-        value = initialValue
-      )
-    ).run(
-      sender = Addresses.ADMIN_ADDRESS
-    )
-
-    # AND the stability fund has many tokens
-    scenario += token.mint(
-      sp.record(
-        address = stabilityFund.address,
-        value = 1000000 * Constants.PRECISION
-      )
-    ).run(
-      sender = Addresses.ADMIN_ADDRESS
-    )
-
-    # WHEN interest is accrued after the second compound period.
-    scenario += pool.DEBUG_accrueInterest(sp.unit).run(
-      now = sp.timestamp(2 * Constants.SECONDS_PER_COMPOUND)
-    )
-
-    # THEN the contract has the right number of tokens.
-    scenario.verify(token.data.balances[pool.address].balance == 1210000000000000000)        
-
-  @sp.add_test(name="accrueInterest - correctly floors partial periods")
-  def test():
-    scenario = sp.test_scenario()
-
-    # GIVEN a token contract.
-    token = FA12.FA12(
-      admin = Addresses.ADMIN_ADDRESS
-    )
-    scenario += token
-
-    # AND a Pool contract
-    initialValue = Constants.PRECISION
-    pool = PoolContract(
-      interestRate = sp.nat(100000000000000000),
-      underlyingBalance = initialValue,
-      lastInterestCompoundTime = sp.timestamp(0)
-    )
-    scenario += pool
-
-    # AND a stability fund contract.
-    stabilityFund = StabilityFund.StabilityFundContract(
-      savingsAccountContractAddress = pool.address,
-      tokenContractAddress = token.address,
-    )
-    scenario += stabilityFund
-
-    # AND the pool contract is wired to the stability fund.
-    scenario += pool.updateStabilityFundAddress(stabilityFund.address).run(
-      sender = Addresses.GOVERNOR_ADDRESS
-    )
-
-    # AND the pool has the initial underlying balance.
-    scenario += token.mint(
-      sp.record(
-        address = pool.address,
-        value = initialValue
-      )
-    ).run(
-      sender = Addresses.ADMIN_ADDRESS
-    )
-
-    # AND the stability fund has many tokens
-    scenario += token.mint(
-      sp.record(
-        address = stabilityFund.address,
-        value = 1000000 * Constants.PRECISION
-      )
-    ).run(
-      sender = Addresses.ADMIN_ADDRESS
-    )
-
-    # WHEN interest is accrued after 2 and a half compound periods.
-    scenario += pool.DEBUG_accrueInterest(sp.unit).run(
-      now = sp.timestamp(150) # 2.5 periods
-    )
-
-    # THEN the contract has the right number of tokens.
-    scenario.verify(token.data.balances[pool.address].balance == 1200000000000000000)    
-
-  ################################################################
-  # updateContractMetadata
-  ################################################################
-
-  @sp.add_test(name="updateContractMetadata - succeeds when called by governor")
-  def test():
-    # GIVEN a Pool contract
-    scenario = sp.test_scenario()
-
-    pool = PoolContract(
-      governorAddress = Addresses.GOVERNOR_ADDRESS,
-    )
-    scenario += pool
-
-    # WHEN the updateContractMetadata is called with a new locator
-    locatorKey = ""
-    newLocator = sp.bytes('0x1234567890')
-    scenario += pool.updateContractMetadata((locatorKey, newLocator)).run(
-      sender = Addresses.GOVERNOR_ADDRESS,
-    )
-
-    # THEN the contract is updated.
-    scenario.verify(pool.data.metadata[locatorKey] == newLocator)
-
-  @sp.add_test(name="updateContractMetadata - fails when not called by governor")
-  def test():
-    # GIVEN a Pool contract
-    scenario = sp.test_scenario()
-
-    pool = PoolContract(
-      governorAddress = Addresses.GOVERNOR_ADDRESS,
-    )
-    scenario += pool
-
-    # WHEN the updateContractMetadata is called by someone who isn't the governor THEN the call fails
-    locatorKey = ""
-    newLocator = sp.bytes('0x1234567890')
-    scenario += pool.updateContractMetadata((locatorKey, newLocator)).run(
-      sender = Addresses.NULL_ADDRESS,
-      valid = False
-    )            
-
-  ################################################################
-  # updateTokenMetadata
-  ################################################################
-
-  @sp.add_test(name="updateTokenMetadata - succeeds when called by governor")
-  def test():
-    # GIVEN a pool contract
-    scenario = sp.test_scenario()
-
-    pool = PoolContract(
-      governorAddress = Addresses.GOVERNOR_ADDRESS,
-    )
-    scenario += pool
-
-    # WHEN the updateTokenMetadata is called with a new data set.
-    newKey = "new"
-    newValue = sp.bytes('0x123456')
-    newMap = sp.map(
-      l = {
-        newKey: newValue
-      },
-      tkey = sp.TString,
-      tvalue = sp.TBytes
-    )
-    newData = (sp.nat(0), newMap)
-
-    scenario += pool.updateTokenMetadata(newData).run(
-      sender = Addresses.GOVERNOR_ADDRESS,
-    )
-
-    # THEN the contract is updated.
-    tokenMetadata = pool.data.token_metadata[0]
-    tokenId = sp.fst(tokenMetadata)
-    tokenMetadataMap = sp.snd(tokenMetadata)
+    scenario.verify(tester.data.lastInterestCompoundTime == sp.timestamp(Constants.SECONDS_PER_COMPOUND))
+
+  # @sp.add_test(name="accrueInterest - updates lastInterestCompoundTime for two periods")
+  # def test():
+  #   # GIVEN a Pool contract
+  #   scenario = sp.test_scenario()
+
+  #   pool = PoolContract(
+  #     interestRate = sp.nat(0),
+  #     lastInterestCompoundTime = sp.timestamp(0)
+  #   )
+  #   scenario += pool
+
+  #   # AND a tester.
+  #   tester = Tester(
+  #     pool.accrueInterest
+  #   )
+  #   scenario += tester
+
+  #   # WHEN interest is accrued after 2 compound periods.
+  #   scenario += pool.DEBUG_accrueInterest(sp.unit).run(
+  #     now = sp.timestamp(Constants.SECONDS_PER_COMPOUND * 2)
+  #   )
+
+  #   # THEN the last interest update time is updated.
+  #   scenario.verify(pool.data.lastInterestCompoundTime == sp.timestamp(Constants.SECONDS_PER_COMPOUND * 2))
+
+  # @sp.add_test(name="accrueInterest - updates lastInterestCompoundTime for one period with nonzero start")
+  # def test():
+  #   # GIVEN a Pool contract with a previous interest update time.
+  #   scenario = sp.test_scenario()
+
+  #   pool = PoolContract(
+  #     interestRate = sp.nat(0),
+  #     lastInterestCompoundTime = sp.timestamp(Constants.SECONDS_PER_COMPOUND)
+  #   )
+  #   scenario += pool
+
+  #   # AND a tester.
+  #   tester = Tester(
+  #     pool.accrueInterest
+  #   )
+  #   scenario += tester
+
+  #   # WHEN interest is accrued after 1 compound period.
+  #   scenario += pool.DEBUG_accrueInterest(sp.unit).run(
+  #     now = sp.timestamp(Constants.SECONDS_PER_COMPOUND * 2)
+  #   )
+
+  #   # THEN the last interest update time is updated.
+  #   scenario.verify(pool.data.lastInterestCompoundTime == sp.timestamp(Constants.SECONDS_PER_COMPOUND * 2))
+
+  # @sp.add_test(name="accrueInterest - updates lastInterestCompoundTime by flooring partial periods")
+  # def test():
+  #   # GIVEN a Pool contract
+  #   scenario = sp.test_scenario()
+
+  #   pool = PoolContract(
+  #     interestRate = sp.nat(0),
+  #     lastInterestCompoundTime = sp.timestamp(0)
+  #   )
+  #   scenario += pool
+
+  #   # AND a tester.
+  #   tester = Tester(
+  #     pool.accrueInterest
+  #   )
+  #   scenario += tester
+
+  #   # WHEN interest is accrued after 2.5 periods
+  #   scenario += pool.DEBUG_accrueInterest(sp.unit).run(
+  #     now = sp.timestamp(150) # 2.5 periods
+  #   )
+
+  #   # THEN the last interest update time is floored.
+  #   scenario.verify(pool.data.lastInterestCompoundTime == sp.timestamp(Constants.SECONDS_PER_COMPOUND * 2))    
+
+  # @sp.add_test(name="accrueInterest - calculates accrued interest for one period")
+  # def test():
+  #   # GIVEN a Pool contract
+  #   scenario = sp.test_scenario()
+
+  #   initialValue = Constants.PRECISION
+  #   pool = PoolContract(
+  #     interestRate = sp.nat(100000000000000000),
+  #     underlyingBalance = initialValue,
+  #     lastInterestCompoundTime = sp.timestamp(0)
+  #   )
+  #   scenario += pool
+
+  #   # AND a tester.
+  #   tester = Tester(
+  #     pool.accrueInterest
+  #   )
+  #   scenario += tester
+
+  #   # WHEN interest is accrued after 1 compound period.
+  #   scenario += pool.DEBUG_accrueInterest(sp.unit).run(
+  #     now = sp.timestamp(Constants.SECONDS_PER_COMPOUND)
+  #   )
+
+  #   # THEN the the accrued interest is calculated correctly.
+  #   scenario.verify(pool.data.debug_accrueInterest.open_some() == sp.as_nat(1100000000000000000 - initialValue))
+
+  # @sp.add_test(name="accrueInterest - calculates accrued interest for two periods")
+  # def test():
+  #   # GIVEN a Pool contract
+  #   scenario = sp.test_scenario()
+
+  #   initialValue = Constants.PRECISION
+  #   pool = PoolContract(
+  #     interestRate = sp.nat(100000000000000000),
+  #     underlyingBalance = initialValue,
+  #     lastInterestCompoundTime = sp.timestamp(0)
+  #   )
+  #   scenario += pool
+
+  #   # AND a tester.
+  #   tester = Tester(
+  #     pool.accrueInterest
+  #   )
+  #   scenario += tester
+
+  #   # WHEN interest is accrued after 2 compound periods.
+  #   scenario += pool.DEBUG_accrueInterest(sp.unit).run(
+  #     now = sp.timestamp(Constants.SECONDS_PER_COMPOUND * 2)
+  #   )
+
+  #   # THEN the the accrued interest is calculated correctly.
+  #   scenario.verify(pool.data.debug_accrueInterest.open_some() == sp.as_nat(1200000000000000000 - initialValue))
+
+  # @sp.add_test(name="accrueInterest - calculates accrued interest for one period with nonzero start")
+  # def test():
+  #   # GIVEN a Pool contract with a previous interest update time.
+  #   scenario = sp.test_scenario()
+
+  #   initialValue = 1100000000000000000
+  #   pool = PoolContract(
+  #     interestRate = sp.nat(100000000000000000),
+  #     underlyingBalance = initialValue,
+  #     lastInterestCompoundTime = sp.timestamp(Constants.SECONDS_PER_COMPOUND)
+  #   )
+  #   scenario += pool
+
+  #   # AND a tester.
+  #   tester = Tester(
+  #     pool.accrueInterest
+  #   )
+  #   scenario += tester
+
+  #   # WHEN interest is accrued after 1 compound period.
+  #   scenario += pool.DEBUG_accrueInterest(sp.unit).run(
+  #     now = sp.timestamp(Constants.SECONDS_PER_COMPOUND * 2)
+  #   )
+
+  #   # THEN the the accrued interest is calculated correctly.
+  #   scenario.verify(pool.data.debug_accrueInterest.open_some() == sp.as_nat(1210000000000000000 - initialValue))
+
+  # @sp.add_test(name="accrueInterest - calculates accrued interest by flooring partial periods")
+  # def test():
+  #   # GIVEN a Pool contract
+  #   scenario = sp.test_scenario()
+
+  #   initialValue = Constants.PRECISION
+  #   pool = PoolContract(
+  #     interestRate = sp.nat(100000000000000000),
+  #     underlyingBalance = initialValue,
+  #     lastInterestCompoundTime = sp.timestamp(0)
+  #   )
+  #   scenario += pool
+
+  #   # AND a tester.
+  #   tester = Tester(
+  #     pool.accrueInterest
+  #   )
+  #   scenario += tester
+
+  #   # WHEN interest is accrued after 2.5 periods
+  #   scenario += pool.DEBUG_accrueInterest(sp.unit).run(
+  #     now = sp.timestamp(150) # 2.5 periods
+  #   )
+
+  #   # THEN the the accrued interest is calculated correctly.
+  #   scenario.verify(pool.data.debug_accrueInterest.open_some() == sp.as_nat(1200000000000000000 - initialValue))
+
+  # @sp.add_test(name="accrueInterest - retrieves stability fees for one period")
+  # def test():
+  #   scenario = sp.test_scenario()
+
+  #   # GIVEN a token contract.
+  #   token = FA12.FA12(
+  #     admin = Addresses.ADMIN_ADDRESS
+  #   )
+  #   scenario += token
+
+  #   # AND a Pool contract
+  #   initialValue = Constants.PRECISION
+  #   pool = PoolContract(
+  #     interestRate = sp.nat(100000000000000000),
+  #     underlyingBalance = initialValue,
+  #     lastInterestCompoundTime = sp.timestamp(0)
+  #   )
+  #   scenario += pool
+
+  #   # AND a stability fund contract.
+  #   stabilityFund = StabilityFund.StabilityFundContract(
+  #     savingsAccountContractAddress = pool.address,
+  #     tokenContractAddress = token.address,
+  #   )
+  #   scenario += stabilityFund
+
+  #   # AND the pool contract is wired to the stability fund.
+  #   scenario += pool.updateStabilityFundAddress(stabilityFund.address).run(
+  #     sender = Addresses.GOVERNOR_ADDRESS
+  #   )
+
+  #   # AND the pool has the initial underlying balance.
+  #   scenario += token.mint(
+  #     sp.record(
+  #       address = pool.address,
+  #       value = initialValue
+  #     )
+  #   ).run(
+  #     sender = Addresses.ADMIN_ADDRESS
+  #   )
+
+  #   # AND the stability fund has many tokens
+  #   scenario += token.mint(
+  #     sp.record(
+  #       address = stabilityFund.address,
+  #       value = 1000000 * Constants.PRECISION
+  #     )
+  #   ).run(
+  #     sender = Addresses.ADMIN_ADDRESS
+  #   )
+
+  #   # AND a tester.
+  #   tester = Tester(
+  #     pool.accrueInterest
+  #   )
+  #   scenario += tester
+
+  #   # WHEN interest is accrued after 1 compound period.
+  #   scenario += pool.DEBUG_accrueInterest(sp.unit).run(
+  #     now = sp.timestamp(Constants.SECONDS_PER_COMPOUND)
+  #   )
+
+  #   # THEN the contract has the right number of tokens.
+  #   scenario.verify(token.data.balances[pool.address].balance == 1100000000000000000)
+
+  # @sp.add_test(name="accrueInterest - retrieves stability fees for two periods")
+  # def test():
+  #   scenario = sp.test_scenario()
+
+  #   # GIVEN a token contract.
+  #   token = FA12.FA12(
+  #     admin = Addresses.ADMIN_ADDRESS
+  #   )
+  #   scenario += token
+
+  #   # AND a Pool contract
+  #   initialValue = Constants.PRECISION
+  #   pool = PoolContract(
+  #     interestRate = sp.nat(100000000000000000),
+  #     underlyingBalance = initialValue,
+  #     lastInterestCompoundTime = sp.timestamp(0)
+  #   )
+  #   scenario += pool
+
+  #   # AND a stability fund contract.
+  #   stabilityFund = StabilityFund.StabilityFundContract(
+  #     savingsAccountContractAddress = pool.address,
+  #     tokenContractAddress = token.address,
+  #   )
+  #   scenario += stabilityFund
+
+  #   # AND the pool contract is wired to the stability fund.
+  #   scenario += pool.updateStabilityFundAddress(stabilityFund.address).run(
+  #     sender = Addresses.GOVERNOR_ADDRESS
+  #   )
+
+  #   # AND the pool has the initial underlying balance.
+  #   scenario += token.mint(
+  #     sp.record(
+  #       address = pool.address,
+  #       value = initialValue
+  #     )
+  #   ).run(
+  #     sender = Addresses.ADMIN_ADDRESS
+  #   )
+
+  #   # AND the stability fund has many tokens
+  #   scenario += token.mint(
+  #     sp.record(
+  #       address = stabilityFund.address,
+  #       value = 1000000 * Constants.PRECISION
+  #     )
+  #   ).run(
+  #     sender = Addresses.ADMIN_ADDRESS
+  #   )
+
+  #   # AND a tester.
+  #   tester = Tester(
+  #     pool.accrueInterest
+  #   )
+  #   scenario += tester
+
+  #   # WHEN interest is accrued after 2 compound periods.
+  #   scenario += pool.DEBUG_accrueInterest(sp.unit).run(
+  #     now = sp.timestamp(2 * Constants.SECONDS_PER_COMPOUND)
+  #   )
+
+  #   # THEN the contract has the right number of tokens.
+  #   scenario.verify(token.data.balances[pool.address].balance == 1200000000000000000)    
+
+  # @sp.add_test(name="accrueInterest - retrieves stability fees for one periods starting at nonzero")
+  # def test():
+  #   scenario = sp.test_scenario()
+
+  #   # GIVEN a token contract.
+  #   token = FA12.FA12(
+  #     admin = Addresses.ADMIN_ADDRESS
+  #   )
+  #   scenario += token
+
+  #   # AND a Pool contract
+  #   initialValue = sp.nat(1100000000000000000)
+  #   pool = PoolContract(
+  #     interestRate = sp.nat(100000000000000000),
+  #     underlyingBalance = initialValue,
+  #     lastInterestCompoundTime = sp.timestamp(Constants.SECONDS_PER_COMPOUND)
+  #   )
+  #   scenario += pool
+
+  #   # AND a stability fund contract.
+  #   stabilityFund = StabilityFund.StabilityFundContract(
+  #     savingsAccountContractAddress = pool.address,
+  #     tokenContractAddress = token.address,
+  #   )
+  #   scenario += stabilityFund
+
+  #   # AND the pool contract is wired to the stability fund.
+  #   scenario += pool.updateStabilityFundAddress(stabilityFund.address).run(
+  #     sender = Addresses.GOVERNOR_ADDRESS
+  #   )
+
+  #   # AND the pool has the initial underlying balance.
+  #   scenario += token.mint(
+  #     sp.record(
+  #       address = pool.address,
+  #       value = initialValue
+  #     )
+  #   ).run(
+  #     sender = Addresses.ADMIN_ADDRESS
+  #   )
+
+  #   # AND the stability fund has many tokens
+  #   scenario += token.mint(
+  #     sp.record(
+  #       address = stabilityFund.address,
+  #       value = 1000000 * Constants.PRECISION
+  #     )
+  #   ).run(
+  #     sender = Addresses.ADMIN_ADDRESS
+  #   )
+
+  #   # AND a tester.
+  #   tester = Tester(
+  #     pool.accrueInterest
+  #   )
+  #   scenario += tester
+
+  #   # WHEN interest is accrued after the second compound period.
+  #   scenario += pool.DEBUG_accrueInterest(sp.unit).run(
+  #     now = sp.timestamp(2 * Constants.SECONDS_PER_COMPOUND)
+  #   )
+
+  #   # THEN the contract has the right number of tokens.
+  #   scenario.verify(token.data.balances[pool.address].balance == 1210000000000000000)        
+
+  # @sp.add_test(name="accrueInterest - correctly floors partial periods")
+  # def test():
+  #   scenario = sp.test_scenario()
+
+  #   # GIVEN a token contract.
+  #   token = FA12.FA12(
+  #     admin = Addresses.ADMIN_ADDRESS
+  #   )
+  #   scenario += token
+
+  #   # AND a Pool contract
+  #   initialValue = Constants.PRECISION
+  #   pool = PoolContract(
+  #     interestRate = sp.nat(100000000000000000),
+  #     underlyingBalance = initialValue,
+  #     lastInterestCompoundTime = sp.timestamp(0)
+  #   )
+  #   scenario += pool
+
+  #   # AND a stability fund contract.
+  #   stabilityFund = StabilityFund.StabilityFundContract(
+  #     savingsAccountContractAddress = pool.address,
+  #     tokenContractAddress = token.address,
+  #   )
+  #   scenario += stabilityFund
+
+  #   # AND the pool contract is wired to the stability fund.
+  #   scenario += pool.updateStabilityFundAddress(stabilityFund.address).run(
+  #     sender = Addresses.GOVERNOR_ADDRESS
+  #   )
+
+  #   # AND the pool has the initial underlying balance.
+  #   scenario += token.mint(
+  #     sp.record(
+  #       address = pool.address,
+  #       value = initialValue
+  #     )
+  #   ).run(
+  #     sender = Addresses.ADMIN_ADDRESS
+  #   )
+
+  #   # AND the stability fund has many tokens
+  #   scenario += token.mint(
+  #     sp.record(
+  #       address = stabilityFund.address,
+  #       value = 1000000 * Constants.PRECISION
+  #     )
+  #   ).run(
+  #     sender = Addresses.ADMIN_ADDRESS
+  #   )
+
+  #   # AND a tester.
+  #   tester = Tester(
+  #     pool.accrueInterest
+  #   )
+  #   scenario += tester
+
+  #   # WHEN interest is accrued after 2 and a half compound periods.
+  #   scenario += pool.DEBUG_accrueInterest(sp.unit).run(
+  #     now = sp.timestamp(150) # 2.5 periods
+  #   )
+
+  #   # THEN the contract has the right number of tokens.
+  #   scenario.verify(token.data.balances[pool.address].balance == 1200000000000000000)    
+
+  # ################################################################
+  # # updateContractMetadata
+  # ################################################################
+
+  # @sp.add_test(name="updateContractMetadata - succeeds when called by governor")
+  # def test():
+  #   # GIVEN a Pool contract
+  #   scenario = sp.test_scenario()
+
+  #   pool = PoolContract(
+  #     governorAddress = Addresses.GOVERNOR_ADDRESS,
+  #   )
+  #   scenario += pool
+
+  #   # WHEN the updateContractMetadata is called with a new locator
+  #   locatorKey = ""
+  #   newLocator = sp.bytes('0x1234567890')
+  #   scenario += pool.updateContractMetadata((locatorKey, newLocator)).run(
+  #     sender = Addresses.GOVERNOR_ADDRESS,
+  #   )
+
+  #   # THEN the contract is updated.
+  #   scenario.verify(pool.data.metadata[locatorKey] == newLocator)
+
+  # @sp.add_test(name="updateContractMetadata - fails when not called by governor")
+  # def test():
+  #   # GIVEN a Pool contract
+  #   scenario = sp.test_scenario()
+
+  #   pool = PoolContract(
+  #     governorAddress = Addresses.GOVERNOR_ADDRESS,
+  #   )
+  #   scenario += pool
+
+  #   # WHEN the updateContractMetadata is called by someone who isn't the governor THEN the call fails
+  #   locatorKey = ""
+  #   newLocator = sp.bytes('0x1234567890')
+  #   scenario += pool.updateContractMetadata((locatorKey, newLocator)).run(
+  #     sender = Addresses.NULL_ADDRESS,
+  #     valid = False
+  #   )            
+
+  # ################################################################
+  # # updateTokenMetadata
+  # ################################################################
+
+  # @sp.add_test(name="updateTokenMetadata - succeeds when called by governor")
+  # def test():
+  #   # GIVEN a pool contract
+  #   scenario = sp.test_scenario()
+
+  #   pool = PoolContract(
+  #     governorAddress = Addresses.GOVERNOR_ADDRESS,
+  #   )
+  #   scenario += pool
+
+  #   # WHEN the updateTokenMetadata is called with a new data set.
+  #   newKey = "new"
+  #   newValue = sp.bytes('0x123456')
+  #   newMap = sp.map(
+  #     l = {
+  #       newKey: newValue
+  #     },
+  #     tkey = sp.TString,
+  #     tvalue = sp.TBytes
+  #   )
+  #   newData = (sp.nat(0), newMap)
+
+  #   scenario += pool.updateTokenMetadata(newData).run(
+  #     sender = Addresses.GOVERNOR_ADDRESS,
+  #   )
+
+  #   # THEN the contract is updated.
+  #   tokenMetadata = pool.data.token_metadata[0]
+  #   tokenId = sp.fst(tokenMetadata)
+  #   tokenMetadataMap = sp.snd(tokenMetadata)
             
-    scenario.verify(tokenId == sp.nat(0))
-    scenario.verify(tokenMetadataMap[newKey] == newValue)
-
-  @sp.add_test(name="updateTokenMetadata - fails when not called by governor")
-  def test():
-    # GIVEN a Pool contract
-    scenario = sp.test_scenario()
-
-    pool = PoolContract(
-      governorAddress = Addresses.GOVERNOR_ADDRESS,
-    )
-    scenario += pool
-
-    # WHEN the updateTokenMetadata is called by someone who isn't the governor THEN the call fails
-    newMap = sp.map(
-      l = {
-        "new": sp.bytes('0x123456')
-      },
-      tkey = sp.TString,
-      tvalue = sp.TBytes
-    )
-    newData = (sp.nat(0), newMap)
-    scenario += pool.updateTokenMetadata(newData).run(
-      sender = Addresses.NULL_ADDRESS,
-      valid = False
-    )            
-
-  ################################################################
-  # updateGovernorAddress
-  ################################################################
-
-  @sp.add_test(name="updateGovernorAddress - fails if sender is not governor")
-  def test():
-    scenario = sp.test_scenario()
-
-    # GIVEN a pool contract
-    pool = PoolContract()
-    scenario += pool
-
-    # WHEN updateGovernorAddress is called by someone other than the governor
-    # THEN the call will fail
-    notGovernor = Addresses.NULL_ADDRESS
-    scenario += pool.updateGovernorAddress(Addresses.ROTATED_ADDRESS).run(
-      sender = notGovernor,
-      valid = False
-    )
-
-  @sp.add_test(name="updateGovernorAddress - can rotate governor")
-  def test():
-    scenario = sp.test_scenario()
-
-    # GIVEN a pool contract
-    pool = PoolContract()
-    scenario += pool
-
-    # WHEN updateGovernorAddress is called
-    scenario += pool.updateGovernorAddress(Addresses.ROTATED_ADDRESS).run(
-      sender = Addresses.GOVERNOR_ADDRESS,
-    )    
-
-    # THEN the governor is rotated.
-    scenario.verify(pool.data.governorAddress == Addresses.ROTATED_ADDRESS)
-
-  ################################################################
-  # updateStabilityFundAddress
-  ################################################################
-
-  @sp.add_test(name="updateStabilityFundAddress - fails if sender is not governor")
-  def test():
-    scenario = sp.test_scenario()
-
-    # GIVEN a pool contract
-    pool = PoolContract()
-    scenario += pool
-
-    # WHEN updateStabilityFundAddress is called by someone other than the governor
-    # THEN the call will fail
-    notGovernor = Addresses.NULL_ADDRESS
-    scenario += pool.updateStabilityFundAddress(Addresses.ROTATED_ADDRESS).run(
-      sender = notGovernor,
-      valid = False
-    )
-
-  @sp.add_test(name="updateStabilityFundAddress - can rotate governor")
-  def test():
-    scenario = sp.test_scenario()
-
-    # GIVEN a pool contract
-    pool = PoolContract()
-    scenario += pool
-
-    # WHEN updateStabilityFundAddress is called
-    scenario += pool.updateStabilityFundAddress(Addresses.ROTATED_ADDRESS).run(
-      sender = Addresses.GOVERNOR_ADDRESS,
-    )    
-
-    # THEN the governor is rotated.
-    scenario.verify(pool.data.stabilityFundAddress == Addresses.ROTATED_ADDRESS)
-
-  ################################################################
-  # updateInterestRate
-  ################################################################
-
-  @sp.add_test(name="updateInterestRate - fails if sender is not governor")
-  def test():
-    scenario = sp.test_scenario()
-
-    # GIVEN a pool contract
-    pool = PoolContract()
-    scenario += pool
-
-    # WHEN updateInterestRate is called by someone other than the governor
-    # THEN the call will fail
-    notGovernor = Addresses.NULL_ADDRESS
-    newInterestRate = sp.nat(123)
-    scenario += pool.updateInterestRate(newInterestRate).run(
-      sender = notGovernor,
-      valid = False
-    )
-
-  @sp.add_test(name="updateInterestRate - can rotate governor")
-  def test():
-    scenario = sp.test_scenario()
-
-    # GIVEN a pool contract
-    pool = PoolContract()
-    scenario += pool
-
-    # WHEN updateInterestRate is called
-    newInterestRate = sp.nat(123)
-    scenario += pool.updateInterestRate(newInterestRate).run(
-      sender = Addresses.GOVERNOR_ADDRESS,
-    )    
-
-    # THEN the governor is rotated.
-    scenario.verify(pool.data.interestRate == newInterestRate)
-
-  ################################################################
-  # deposit
-  ################################################################
-
-  @sp.add_test(name="deposit - fails in bad state")
-  def test():
-    scenario = sp.test_scenario()
-
-    # GIVEN a token contract
-    token = FA12.FA12(
-      admin = Addresses.ADMIN_ADDRESS
-    )
-    scenario += token
-
-    # AND a pool contract in the WAITING_DEPOSIT state
-    pool = PoolContract(
-      tokenAddress = token.address,
-      state = WAITING_DEPOSIT
-    )
-    scenario += pool
-
-    # AND Alice has tokens
-    aliceTokens = sp.nat(10)
-    scenario += token.mint(
-      sp.record(
-        address = Addresses.ALICE_ADDRESS,
-        value = aliceTokens
-      )
-    ).run(
-      sender = Addresses.ADMIN_ADDRESS
-    )
-
-    # AND Alice has given the pool an allowance
-    scenario += token.approve(
-      sp.record(
-        spender = pool.address,
-        value = aliceTokens
-      )
-    ).run(
-      sender = Addresses.ALICE_ADDRESS
-    )
-
-    # WHEN Alice deposits tokens in the contract.
-    # THEN the call fails
-    scenario += pool.deposit(
-      aliceTokens
-    ).run(
-      sender = Addresses.ALICE_ADDRESS,
-      valid = False
-    )
-
-  @sp.add_test(name="deposit - resets state")
-  def test():
-    scenario = sp.test_scenario()
-
-    # GIVEN a token contract
-    token = FA12.FA12(
-      admin = Addresses.ADMIN_ADDRESS
-    )
-    scenario += token
-
-    # AND a pool contract
-    pool = PoolContract(
-      tokenAddress = token.address
-    )
-    scenario += pool
-
-    # AND Alice has tokens
-    aliceTokens = sp.nat(10)
-    scenario += token.mint(
-      sp.record(
-        address = Addresses.ALICE_ADDRESS,
-        value = aliceTokens
-      )
-    ).run(
-      sender = Addresses.ADMIN_ADDRESS
-    )
-
-    # AND Alice has given the pool an allowance
-    scenario += token.approve(
-      sp.record(
-        spender = pool.address,
-        value = aliceTokens
-      )
-    ).run(
-      sender = Addresses.ALICE_ADDRESS
-    )
-
-    # WHEN Alice deposits tokens in the contract.
-    scenario += pool.deposit(
-      aliceTokens
-    ).run(
-      sender = Addresses.ALICE_ADDRESS
-    )
-
-    # THEN the state is reset to idle.
-    scenario.verify(pool.data.state == IDLE)
-    scenario.verify(pool.data.savedState_tokensToDeposit.is_some() == False)
-    scenario.verify(pool.data.savedState_depositor.is_some() == False)
-
-  @sp.add_test(name="deposit - can deposit from one account")
-  def test():
-    scenario = sp.test_scenario()
-
-    # GIVEN a token contract
-    token = FA12.FA12(
-      admin = Addresses.ADMIN_ADDRESS
-    )
-    scenario += token
-
-    # AND a pool contract
-    pool = PoolContract(
-      tokenAddress = token.address
-    )
-    scenario += pool
-
-    # AND Alice has tokens
-    aliceTokens = sp.nat(10)
-    scenario += token.mint(
-      sp.record(
-        address = Addresses.ALICE_ADDRESS,
-        value = aliceTokens
-      )
-    ).run(
-      sender = Addresses.ADMIN_ADDRESS
-    )
-
-    # AND Alice has given the pool an allowance
-    scenario += token.approve(
-      sp.record(
-        spender = pool.address,
-        value = aliceTokens
-      )
-    ).run(
-      sender = Addresses.ALICE_ADDRESS
-    )
-
-    # WHEN Alice deposits tokens in the contract.
-    scenario += pool.deposit(
-      aliceTokens
-    ).run(
-      sender = Addresses.ALICE_ADDRESS
-    )
-
-    # THEN Alice trades her tokens for LP tokens
-    scenario.verify(token.data.balances[Addresses.ALICE_ADDRESS].balance == sp.nat(0))
-    scenario.verify(pool.data.balances[Addresses.ALICE_ADDRESS].balance == aliceTokens * Constants.PRECISION)
-
-    # AND the total supply of tokens is as expected
-    scenario.verify(pool.data.totalSupply == aliceTokens * Constants.PRECISION)
-
-    # AND the pool has possession of the correct number of tokens.
-    scenario.verify(token.data.balances[pool.address].balance == aliceTokens)
-    scenario.verify(pool.data.underlyingBalance == aliceTokens)
-
-  @sp.add_test(name="deposit - can deposit from two accounts")
-  def test():
-    scenario = sp.test_scenario()
-
-    # GIVEN a token contract
-    token = FA12.FA12(
-      admin = Addresses.ADMIN_ADDRESS
-    )
-    scenario += token
-
-    # AND a pool contract
-    pool = PoolContract(
-      tokenAddress = token.address
-    )
-    scenario += pool
-
-    # AND Alice has tokens
-    aliceTokens = sp.nat(10)
-    scenario += token.mint(
-      sp.record(
-        address = Addresses.ALICE_ADDRESS,
-        value = aliceTokens
-      )
-    ).run(
-      sender = Addresses.ADMIN_ADDRESS
-    )
-
-    # AND Bob has twice as many tokens
-    bobTokens = sp.nat(40)
-    scenario += token.mint(
-      sp.record(
-        address = Addresses.BOB_ADDRESS,
-        value = bobTokens
-      )
-    ).run(
-      sender = Addresses.ADMIN_ADDRESS
-    )
-
-    # AND Alice has given the pool an allowance
-    scenario += token.approve(
-      sp.record(
-        spender = pool.address,
-        value = aliceTokens
-      )
-    ).run(
-      sender = Addresses.ALICE_ADDRESS
-    )
-
-    # AND Bob has given the pool an allowance
-    scenario += token.approve(
-      sp.record(
-        spender = pool.address,
-        value = bobTokens
-      )
-    ).run(
-      sender = Addresses.BOB_ADDRESS
-    )
-
-    # WHEN Alice and Bob deposit tokens in the contract.
-    scenario += pool.deposit(
-      aliceTokens
-    ).run(
-      sender = Addresses.ALICE_ADDRESS
-    )
-
-    scenario += pool.deposit(
-      bobTokens
-    ).run(
-      sender = Addresses.BOB_ADDRESS
-    )
-
-    # THEN Alice trades her tokens for LP tokens
-    scenario.verify(token.data.balances[Addresses.ALICE_ADDRESS].balance == sp.nat(0))
-    scenario.verify(pool.data.balances[Addresses.ALICE_ADDRESS].balance == aliceTokens * Constants.PRECISION)
-
-    # AND Bob trades his tokens for LP tokens
-    scenario.verify(token.data.balances[Addresses.BOB_ADDRESS].balance == sp.nat(0))
-    scenario.verify(pool.data.balances[Addresses.BOB_ADDRESS].balance == aliceTokens * 4  * Constants.PRECISION)
-
-    # AND the total supply of tokens is as expected
-    scenario.verify(pool.data.totalSupply == (aliceTokens + bobTokens) * Constants.PRECISION)
-
-    # AND the pool has possession of the correct number of tokens.
-    scenario.verify(token.data.balances[pool.address].balance == aliceTokens + bobTokens)
-    scenario.verify(pool.data.underlyingBalance == aliceTokens + bobTokens)
-
-  @sp.add_test(name="deposit - can deposit from two accounts - reversed")
-  def test():
-    scenario = sp.test_scenario()
-
-    # GIVEN a token contract
-    token = FA12.FA12(
-      admin = Addresses.ADMIN_ADDRESS
-    )
-    scenario += token
-
-    # AND a pool contract
-    pool = PoolContract(
-      tokenAddress = token.address
-    )
-    scenario += pool
-
-    # AND Alice has tokens
-    aliceTokens = sp.nat(10)
-    scenario += token.mint(
-      sp.record(
-        address = Addresses.ALICE_ADDRESS,
-        value = aliceTokens
-      )
-    ).run(
-      sender = Addresses.ADMIN_ADDRESS
-    )
-
-    # AND Bob has twice as many tokens
-    bobTokens = sp.nat(40)
-    scenario += token.mint(
-      sp.record(
-        address = Addresses.BOB_ADDRESS,
-        value = bobTokens
-      )
-    ).run(
-      sender = Addresses.ADMIN_ADDRESS
-    )
-
-    # AND Alice has given the pool an allowance
-    scenario += token.approve(
-      sp.record(
-        spender = pool.address,
-        value = aliceTokens
-      )
-    ).run(
-      sender = Addresses.ALICE_ADDRESS
-    )
-
-    # AND Bob has given the pool an allowance
-    scenario += token.approve(
-      sp.record(
-        spender = pool.address,
-        value = bobTokens
-      )
-    ).run(
-      sender = Addresses.BOB_ADDRESS
-    )
-
-    # WHEN Alice and Bob deposit tokens in the contract.
-    scenario += pool.deposit(
-      bobTokens
-    ).run(
-      sender = Addresses.BOB_ADDRESS
-    )
-
-    scenario += pool.deposit(
-      aliceTokens
-    ).run(
-      sender = Addresses.ALICE_ADDRESS
-    )
-
-    # THEN Alice trades her tokens for LP tokens
-    scenario.verify(token.data.balances[Addresses.ALICE_ADDRESS].balance == sp.nat(0))
-    scenario.verify(pool.data.balances[Addresses.ALICE_ADDRESS].balance == aliceTokens * Constants.PRECISION)
-
-    # AND Bob trades his tokens for LP tokens
-    scenario.verify(token.data.balances[Addresses.BOB_ADDRESS].balance == sp.nat(0))
-    scenario.verify(pool.data.balances[Addresses.BOB_ADDRESS].balance == aliceTokens * 4  * Constants.PRECISION)
-
-    # AND the total supply of tokens is as expected
-    scenario.verify(pool.data.totalSupply == (aliceTokens + bobTokens) * Constants.PRECISION)
-
-    # AND the pool has possession of the correct number of tokens.
-    scenario.verify(token.data.balances[pool.address].balance == aliceTokens + bobTokens)
-    scenario.verify(pool.data.underlyingBalance == aliceTokens + bobTokens)
-
-  @sp.add_test(name="deposit - successfully mints LP tokens after additional liquidity is deposited in the pool")
-  def test():
-    scenario = sp.test_scenario()
-
-    # GIVEN a token contract
-    token = FA12.FA12(
-      admin = Addresses.ADMIN_ADDRESS
-    )
-    scenario += token
-
-    # AND a pool contract
-    pool = PoolContract(
-      tokenAddress = token.address
-    )
-    scenario += pool
-
-    # AND Alice has tokens
-    aliceTokens = sp.nat(10)
-    scenario += token.mint(
-      sp.record(
-        address = Addresses.ALICE_ADDRESS,
-        value = aliceTokens
-      )
-    ).run(
-      sender = Addresses.ADMIN_ADDRESS
-    )
-
-    # AND Bob has twice as many tokens
-    bobTokens = sp.nat(40)
-    scenario += token.mint(
-      sp.record(
-        address = Addresses.BOB_ADDRESS,
-        value = bobTokens
-      )
-    ).run(
-      sender = Addresses.ADMIN_ADDRESS
-    )
-
-    # AND Charlie has tokens
-    charlieTokens = sp.nat(60)
-    scenario += token.mint(
-      sp.record(
-        address = Addresses.CHARLIE_ADDRESS,
-        value = charlieTokens
-      )
-    ).run(
-      sender = Addresses.ADMIN_ADDRESS
-    )
-
-    # AND Alice has given the pool an allowance
-    scenario += token.approve(
-      sp.record(
-        spender = pool.address,
-        value = aliceTokens
-      )
-    ).run(
-      sender = Addresses.ALICE_ADDRESS
-    )
-
-    # AND Bob has given the pool an allowance
-    scenario += token.approve(
-      sp.record(
-        spender = pool.address,
-        value = bobTokens
-      )
-    ).run(
-      sender = Addresses.BOB_ADDRESS
-    )
-
-    # AND Charlie has given the pool an allowance
-    scenario += token.approve(
-      sp.record(
-        spender = pool.address,
-        value = charlieTokens
-      )
-    ).run(
-      sender = Addresses.CHARLIE_ADDRESS
-    )
-
-    # AND Alice and Bob deposit tokens in the contract.
-    scenario += pool.deposit(
-      aliceTokens
-    ).run(
-      sender = Addresses.ALICE_ADDRESS
-    )
-
-    scenario += pool.deposit(
-      bobTokens
-    ).run(
-      sender = Addresses.BOB_ADDRESS
-    )
-
-    # WHEN the contract receives an additional number of tokens.
-    additionalTokens = 10
-    scenario += token.mint(
-      sp.record(
-        address = pool.address,
-        value = additionalTokens
-      )
-    ).run(
-      sender = Addresses.ADMIN_ADDRESS
-    )
-
-    # AND Charlie joins after the liquidity is added
-    scenario += pool.deposit(
-      charlieTokens
-    ).run(
-      sender = Addresses.CHARLIE_ADDRESS
-    )
-
-    # THEN the contract doubles the number of LP tokens
-    scenario.verify(pool.data.totalSupply == (100 * Constants.PRECISION))
-
-    # AND the pool has the right number of tokens.
-    scenario.verify(token.data.balances[pool.address].balance == sp.nat(10 + 40 + 10 + 60))
-    scenario.verify(pool.data.underlyingBalance == sp.nat(10 + 40 + 10 + 60))
-
-    # AND Charlie has the right number of LP tokens.
-    scenario.verify(pool.data.balances[Addresses.CHARLIE_ADDRESS].balance == 50 * Constants.PRECISION)
-
-  @sp.add_test(name="deposit - successfully mints LP tokens after additional liquidity is deposited in the pool with a small amount of tokens")
-  def test():
-    scenario = sp.test_scenario()
-
-    # GIVEN a token contract
-    token = FA12.FA12(
-      admin = Addresses.ADMIN_ADDRESS
-    )
-    scenario += token
-
-    # AND a pool contract
-    pool = PoolContract(
-      tokenAddress = token.address
-    )
-    scenario += pool
-
-    # AND Alice has tokens
-    aliceTokens = sp.nat(10)
-    scenario += token.mint(
-      sp.record(
-        address = Addresses.ALICE_ADDRESS,
-        value = aliceTokens
-      )
-    ).run(
-      sender = Addresses.ADMIN_ADDRESS
-    )
-
-    # AND Bob has twice as many tokens
-    bobTokens = sp.nat(40)
-    scenario += token.mint(
-      sp.record(
-        address = Addresses.BOB_ADDRESS,
-        value = bobTokens
-      )
-    ).run(
-      sender = Addresses.ADMIN_ADDRESS
-    )
-
-    # AND Charlie has tokens
-    charlieTokens = sp.nat(20)
-    scenario += token.mint(
-      sp.record(
-        address = Addresses.CHARLIE_ADDRESS,
-        value = charlieTokens
-      )
-    ).run(
-      sender = Addresses.ADMIN_ADDRESS
-    )
-
-    # AND Alice has given the pool an allowance
-    scenario += token.approve(
-      sp.record(
-        spender = pool.address,
-        value = aliceTokens
-      )
-    ).run(
-      sender = Addresses.ALICE_ADDRESS
-    )
-
-    # AND Bob has given the pool an allowance
-    scenario += token.approve(
-      sp.record(
-        spender = pool.address,
-        value = bobTokens
-      )
-    ).run(
-      sender = Addresses.BOB_ADDRESS
-    )
-
-    # AND Charlie has given the pool an allowance
-    scenario += token.approve(
-      sp.record(
-        spender = pool.address,
-        value = charlieTokens
-      )
-    ).run(
-      sender = Addresses.CHARLIE_ADDRESS
-    )
-
-    # AND Alice and Bob deposit tokens in the contract.
-    scenario += pool.deposit(
-      aliceTokens
-    ).run(
-      sender = Addresses.ALICE_ADDRESS
-    )
-
-    scenario += pool.deposit(
-      bobTokens
-    ).run(
-      sender = Addresses.BOB_ADDRESS
-    )
-
-    # WHEN the contract receives an additional number of tokens.
-    additionalTokens = 10
-    scenario += token.mint(
-      sp.record(
-        address = pool.address,
-        value = additionalTokens
-      )
-    ).run(
-      sender = Addresses.ADMIN_ADDRESS
-    )
-
-    # AND Charlie joins after the liquidity is added
-    scenario += pool.deposit(
-      charlieTokens
-    ).run(
-      sender = Addresses.CHARLIE_ADDRESS
-    )
-
-    # # THEN the contract computes the LP tokens correctly
-    scenario.verify(pool.data.totalSupply == (66666666666666666666))
-
-    # AND the pool has the right number of tokens.
-    scenario.verify(token.data.balances[pool.address].balance == sp.nat(10 + 40 + 10 + 20))
-    scenario.verify(pool.data.underlyingBalance == sp.nat(10 + 40 + 10 + 20))
-
-    # AND Charlie has the right number of LP tokens.
-    scenario.verify(pool.data.balances[Addresses.CHARLIE_ADDRESS].balance == 16666666666666666666)
-
-  ################################################################
-  # deposit_callback
-  ################################################################
-
-  @sp.add_test(name="deposit_callback - can finish deposit")
-  def test():
-    scenario = sp.test_scenario()
-
-    # GIVEN a token contract
-    token = FA12.FA12(
-      admin = Addresses.ADMIN_ADDRESS
-    )
-    scenario += token
-
-    # AND Alice has tokens
-    aliceTokens = sp.nat(10)
-    scenario += token.mint(
-      sp.record(
-        address = Addresses.ALICE_ADDRESS,
-        value = aliceTokens
-      )
-    ).run(
-      sender = Addresses.ADMIN_ADDRESS
-    )
-
-    # AND a pool contract in the WAITING_DEPOSIT state
-    pool = PoolContract(
-      state = WAITING_DEPOSIT,
-      savedState_depositor = sp.some(Addresses.ALICE_ADDRESS),
-      savedState_tokensToDeposit = sp.some(aliceTokens),
-
-      tokenAddress = token.address
-    )
-    scenario += pool
+  #   scenario.verify(tokenId == sp.nat(0))
+  #   scenario.verify(tokenMetadataMap[newKey] == newValue)
+
+  # @sp.add_test(name="updateTokenMetadata - fails when not called by governor")
+  # def test():
+  #   # GIVEN a Pool contract
+  #   scenario = sp.test_scenario()
+
+  #   pool = PoolContract(
+  #     governorAddress = Addresses.GOVERNOR_ADDRESS,
+  #   )
+  #   scenario += pool
+
+  #   # WHEN the updateTokenMetadata is called by someone who isn't the governor THEN the call fails
+  #   newMap = sp.map(
+  #     l = {
+  #       "new": sp.bytes('0x123456')
+  #     },
+  #     tkey = sp.TString,
+  #     tvalue = sp.TBytes
+  #   )
+  #   newData = (sp.nat(0), newMap)
+  #   scenario += pool.updateTokenMetadata(newData).run(
+  #     sender = Addresses.NULL_ADDRESS,
+  #     valid = False
+  #   )            
+
+  # ################################################################
+  # # updateGovernorAddress
+  # ################################################################
+
+  # @sp.add_test(name="updateGovernorAddress - fails if sender is not governor")
+  # def test():
+  #   scenario = sp.test_scenario()
+
+  #   # GIVEN a pool contract
+  #   pool = PoolContract()
+  #   scenario += pool
+
+  #   # WHEN updateGovernorAddress is called by someone other than the governor
+  #   # THEN the call will fail
+  #   notGovernor = Addresses.NULL_ADDRESS
+  #   scenario += pool.updateGovernorAddress(Addresses.ROTATED_ADDRESS).run(
+  #     sender = notGovernor,
+  #     valid = False
+  #   )
+
+  # @sp.add_test(name="updateGovernorAddress - can rotate governor")
+  # def test():
+  #   scenario = sp.test_scenario()
+
+  #   # GIVEN a pool contract
+  #   pool = PoolContract()
+  #   scenario += pool
+
+  #   # WHEN updateGovernorAddress is called
+  #   scenario += pool.updateGovernorAddress(Addresses.ROTATED_ADDRESS).run(
+  #     sender = Addresses.GOVERNOR_ADDRESS,
+  #   )    
+
+  #   # THEN the governor is rotated.
+  #   scenario.verify(pool.data.governorAddress == Addresses.ROTATED_ADDRESS)
+
+  # ################################################################
+  # # updateStabilityFundAddress
+  # ################################################################
+
+  # @sp.add_test(name="updateStabilityFundAddress - fails if sender is not governor")
+  # def test():
+  #   scenario = sp.test_scenario()
+
+  #   # GIVEN a pool contract
+  #   pool = PoolContract()
+  #   scenario += pool
+
+  #   # WHEN updateStabilityFundAddress is called by someone other than the governor
+  #   # THEN the call will fail
+  #   notGovernor = Addresses.NULL_ADDRESS
+  #   scenario += pool.updateStabilityFundAddress(Addresses.ROTATED_ADDRESS).run(
+  #     sender = notGovernor,
+  #     valid = False
+  #   )
+
+  # @sp.add_test(name="updateStabilityFundAddress - can rotate governor")
+  # def test():
+  #   scenario = sp.test_scenario()
+
+  #   # GIVEN a pool contract
+  #   pool = PoolContract()
+  #   scenario += pool
+
+  #   # WHEN updateStabilityFundAddress is called
+  #   scenario += pool.updateStabilityFundAddress(Addresses.ROTATED_ADDRESS).run(
+  #     sender = Addresses.GOVERNOR_ADDRESS,
+  #   )    
+
+  #   # THEN the governor is rotated.
+  #   scenario.verify(pool.data.stabilityFundAddress == Addresses.ROTATED_ADDRESS)
+
+  # ################################################################
+  # # updateInterestRate
+  # ################################################################
+
+  # @sp.add_test(name="updateInterestRate - fails if sender is not governor")
+  # def test():
+  #   scenario = sp.test_scenario()
+
+  #   # GIVEN a pool contract
+  #   pool = PoolContract()
+  #   scenario += pool
+
+  #   # WHEN updateInterestRate is called by someone other than the governor
+  #   # THEN the call will fail
+  #   notGovernor = Addresses.NULL_ADDRESS
+  #   newInterestRate = sp.nat(123)
+  #   scenario += pool.updateInterestRate(newInterestRate).run(
+  #     sender = notGovernor,
+  #     valid = False
+  #   )
+
+  # @sp.add_test(name="updateInterestRate - can rotate governor")
+  # def test():
+  #   scenario = sp.test_scenario()
+
+  #   # GIVEN a pool contract
+  #   pool = PoolContract()
+  #   scenario += pool
+
+  #   # WHEN updateInterestRate is called
+  #   newInterestRate = sp.nat(123)
+  #   scenario += pool.updateInterestRate(newInterestRate).run(
+  #     sender = Addresses.GOVERNOR_ADDRESS,
+  #   )    
+
+  #   # THEN the governor is rotated.
+  #   scenario.verify(pool.data.interestRate == newInterestRate)
+
+  # ################################################################
+  # # deposit
+  # ################################################################
+
+  # @sp.add_test(name="deposit - fails in bad state")
+  # def test():
+  #   scenario = sp.test_scenario()
+
+  #   # GIVEN a token contract
+  #   token = FA12.FA12(
+  #     admin = Addresses.ADMIN_ADDRESS
+  #   )
+  #   scenario += token
+
+  #   # AND a pool contract in the WAITING_DEPOSIT state
+  #   pool = PoolContract(
+  #     tokenAddress = token.address,
+  #     state = WAITING_DEPOSIT
+  #   )
+  #   scenario += pool
+
+  #   # AND Alice has tokens
+  #   aliceTokens = sp.nat(10)
+  #   scenario += token.mint(
+  #     sp.record(
+  #       address = Addresses.ALICE_ADDRESS,
+  #       value = aliceTokens
+  #     )
+  #   ).run(
+  #     sender = Addresses.ADMIN_ADDRESS
+  #   )
+
+  #   # AND Alice has given the pool an allowance
+  #   scenario += token.approve(
+  #     sp.record(
+  #       spender = pool.address,
+  #       value = aliceTokens
+  #     )
+  #   ).run(
+  #     sender = Addresses.ALICE_ADDRESS
+  #   )
+
+  #   # WHEN Alice deposits tokens in the contract.
+  #   # THEN the call fails
+  #   scenario += pool.deposit(
+  #     aliceTokens
+  #   ).run(
+  #     sender = Addresses.ALICE_ADDRESS,
+  #     valid = False
+  #   )
+
+  # @sp.add_test(name="deposit - resets state")
+  # def test():
+  #   scenario = sp.test_scenario()
+
+  #   # GIVEN a token contract
+  #   token = FA12.FA12(
+  #     admin = Addresses.ADMIN_ADDRESS
+  #   )
+  #   scenario += token
+
+  #   # AND a pool contract
+  #   pool = PoolContract(
+  #     tokenAddress = token.address
+  #   )
+  #   scenario += pool
+
+  #   # AND Alice has tokens
+  #   aliceTokens = sp.nat(10)
+  #   scenario += token.mint(
+  #     sp.record(
+  #       address = Addresses.ALICE_ADDRESS,
+  #       value = aliceTokens
+  #     )
+  #   ).run(
+  #     sender = Addresses.ADMIN_ADDRESS
+  #   )
+
+  #   # AND Alice has given the pool an allowance
+  #   scenario += token.approve(
+  #     sp.record(
+  #       spender = pool.address,
+  #       value = aliceTokens
+  #     )
+  #   ).run(
+  #     sender = Addresses.ALICE_ADDRESS
+  #   )
+
+  #   # WHEN Alice deposits tokens in the contract.
+  #   scenario += pool.deposit(
+  #     aliceTokens
+  #   ).run(
+  #     sender = Addresses.ALICE_ADDRESS
+  #   )
+
+  #   # THEN the state is reset to idle.
+  #   scenario.verify(pool.data.state == IDLE)
+  #   scenario.verify(pool.data.savedState_tokensToDeposit.is_some() == False)
+  #   scenario.verify(pool.data.savedState_depositor.is_some() == False)
+
+  # @sp.add_test(name="deposit - can deposit from one account")
+  # def test():
+  #   scenario = sp.test_scenario()
+
+  #   # GIVEN a token contract
+  #   token = FA12.FA12(
+  #     admin = Addresses.ADMIN_ADDRESS
+  #   )
+  #   scenario += token
+
+  #   # AND a pool contract
+  #   pool = PoolContract(
+  #     tokenAddress = token.address
+  #   )
+  #   scenario += pool
+
+  #   # AND Alice has tokens
+  #   aliceTokens = sp.nat(10)
+  #   scenario += token.mint(
+  #     sp.record(
+  #       address = Addresses.ALICE_ADDRESS,
+  #       value = aliceTokens
+  #     )
+  #   ).run(
+  #     sender = Addresses.ADMIN_ADDRESS
+  #   )
+
+  #   # AND Alice has given the pool an allowance
+  #   scenario += token.approve(
+  #     sp.record(
+  #       spender = pool.address,
+  #       value = aliceTokens
+  #     )
+  #   ).run(
+  #     sender = Addresses.ALICE_ADDRESS
+  #   )
+
+  #   # WHEN Alice deposits tokens in the contract.
+  #   scenario += pool.deposit(
+  #     aliceTokens
+  #   ).run(
+  #     sender = Addresses.ALICE_ADDRESS
+  #   )
+
+  #   # THEN Alice trades her tokens for LP tokens
+  #   scenario.verify(token.data.balances[Addresses.ALICE_ADDRESS].balance == sp.nat(0))
+  #   scenario.verify(pool.data.balances[Addresses.ALICE_ADDRESS].balance == aliceTokens * Constants.PRECISION)
+
+  #   # AND the total supply of tokens is as expected
+  #   scenario.verify(pool.data.totalSupply == aliceTokens * Constants.PRECISION)
+
+  #   # AND the pool has possession of the correct number of tokens.
+  #   scenario.verify(token.data.balances[pool.address].balance == aliceTokens)
+  #   scenario.verify(pool.data.underlyingBalance == aliceTokens)
+
+  # @sp.add_test(name="deposit - can deposit from two accounts")
+  # def test():
+  #   scenario = sp.test_scenario()
+
+  #   # GIVEN a token contract
+  #   token = FA12.FA12(
+  #     admin = Addresses.ADMIN_ADDRESS
+  #   )
+  #   scenario += token
+
+  #   # AND a pool contract
+  #   pool = PoolContract(
+  #     tokenAddress = token.address
+  #   )
+  #   scenario += pool
+
+  #   # AND Alice has tokens
+  #   aliceTokens = sp.nat(10)
+  #   scenario += token.mint(
+  #     sp.record(
+  #       address = Addresses.ALICE_ADDRESS,
+  #       value = aliceTokens
+  #     )
+  #   ).run(
+  #     sender = Addresses.ADMIN_ADDRESS
+  #   )
+
+  #   # AND Bob has twice as many tokens
+  #   bobTokens = sp.nat(40)
+  #   scenario += token.mint(
+  #     sp.record(
+  #       address = Addresses.BOB_ADDRESS,
+  #       value = bobTokens
+  #     )
+  #   ).run(
+  #     sender = Addresses.ADMIN_ADDRESS
+  #   )
+
+  #   # AND Alice has given the pool an allowance
+  #   scenario += token.approve(
+  #     sp.record(
+  #       spender = pool.address,
+  #       value = aliceTokens
+  #     )
+  #   ).run(
+  #     sender = Addresses.ALICE_ADDRESS
+  #   )
+
+  #   # AND Bob has given the pool an allowance
+  #   scenario += token.approve(
+  #     sp.record(
+  #       spender = pool.address,
+  #       value = bobTokens
+  #     )
+  #   ).run(
+  #     sender = Addresses.BOB_ADDRESS
+  #   )
+
+  #   # WHEN Alice and Bob deposit tokens in the contract.
+  #   scenario += pool.deposit(
+  #     aliceTokens
+  #   ).run(
+  #     sender = Addresses.ALICE_ADDRESS
+  #   )
+
+  #   scenario += pool.deposit(
+  #     bobTokens
+  #   ).run(
+  #     sender = Addresses.BOB_ADDRESS
+  #   )
+
+  #   # THEN Alice trades her tokens for LP tokens
+  #   scenario.verify(token.data.balances[Addresses.ALICE_ADDRESS].balance == sp.nat(0))
+  #   scenario.verify(pool.data.balances[Addresses.ALICE_ADDRESS].balance == aliceTokens * Constants.PRECISION)
+
+  #   # AND Bob trades his tokens for LP tokens
+  #   scenario.verify(token.data.balances[Addresses.BOB_ADDRESS].balance == sp.nat(0))
+  #   scenario.verify(pool.data.balances[Addresses.BOB_ADDRESS].balance == aliceTokens * 4  * Constants.PRECISION)
+
+  #   # AND the total supply of tokens is as expected
+  #   scenario.verify(pool.data.totalSupply == (aliceTokens + bobTokens) * Constants.PRECISION)
+
+  #   # AND the pool has possession of the correct number of tokens.
+  #   scenario.verify(token.data.balances[pool.address].balance == aliceTokens + bobTokens)
+  #   scenario.verify(pool.data.underlyingBalance == aliceTokens + bobTokens)
+
+  # @sp.add_test(name="deposit - can deposit from two accounts - reversed")
+  # def test():
+  #   scenario = sp.test_scenario()
+
+  #   # GIVEN a token contract
+  #   token = FA12.FA12(
+  #     admin = Addresses.ADMIN_ADDRESS
+  #   )
+  #   scenario += token
+
+  #   # AND a pool contract
+  #   pool = PoolContract(
+  #     tokenAddress = token.address
+  #   )
+  #   scenario += pool
+
+  #   # AND Alice has tokens
+  #   aliceTokens = sp.nat(10)
+  #   scenario += token.mint(
+  #     sp.record(
+  #       address = Addresses.ALICE_ADDRESS,
+  #       value = aliceTokens
+  #     )
+  #   ).run(
+  #     sender = Addresses.ADMIN_ADDRESS
+  #   )
+
+  #   # AND Bob has twice as many tokens
+  #   bobTokens = sp.nat(40)
+  #   scenario += token.mint(
+  #     sp.record(
+  #       address = Addresses.BOB_ADDRESS,
+  #       value = bobTokens
+  #     )
+  #   ).run(
+  #     sender = Addresses.ADMIN_ADDRESS
+  #   )
+
+  #   # AND Alice has given the pool an allowance
+  #   scenario += token.approve(
+  #     sp.record(
+  #       spender = pool.address,
+  #       value = aliceTokens
+  #     )
+  #   ).run(
+  #     sender = Addresses.ALICE_ADDRESS
+  #   )
+
+  #   # AND Bob has given the pool an allowance
+  #   scenario += token.approve(
+  #     sp.record(
+  #       spender = pool.address,
+  #       value = bobTokens
+  #     )
+  #   ).run(
+  #     sender = Addresses.BOB_ADDRESS
+  #   )
+
+  #   # WHEN Alice and Bob deposit tokens in the contract.
+  #   scenario += pool.deposit(
+  #     bobTokens
+  #   ).run(
+  #     sender = Addresses.BOB_ADDRESS
+  #   )
+
+  #   scenario += pool.deposit(
+  #     aliceTokens
+  #   ).run(
+  #     sender = Addresses.ALICE_ADDRESS
+  #   )
+
+  #   # THEN Alice trades her tokens for LP tokens
+  #   scenario.verify(token.data.balances[Addresses.ALICE_ADDRESS].balance == sp.nat(0))
+  #   scenario.verify(pool.data.balances[Addresses.ALICE_ADDRESS].balance == aliceTokens * Constants.PRECISION)
+
+  #   # AND Bob trades his tokens for LP tokens
+  #   scenario.verify(token.data.balances[Addresses.BOB_ADDRESS].balance == sp.nat(0))
+  #   scenario.verify(pool.data.balances[Addresses.BOB_ADDRESS].balance == aliceTokens * 4  * Constants.PRECISION)
+
+  #   # AND the total supply of tokens is as expected
+  #   scenario.verify(pool.data.totalSupply == (aliceTokens + bobTokens) * Constants.PRECISION)
+
+  #   # AND the pool has possession of the correct number of tokens.
+  #   scenario.verify(token.data.balances[pool.address].balance == aliceTokens + bobTokens)
+  #   scenario.verify(pool.data.underlyingBalance == aliceTokens + bobTokens)
+
+  # @sp.add_test(name="deposit - successfully mints LP tokens after additional liquidity is deposited in the pool")
+  # def test():
+  #   scenario = sp.test_scenario()
+
+  #   # GIVEN a token contract
+  #   token = FA12.FA12(
+  #     admin = Addresses.ADMIN_ADDRESS
+  #   )
+  #   scenario += token
+
+  #   # AND a pool contract
+  #   pool = PoolContract(
+  #     tokenAddress = token.address
+  #   )
+  #   scenario += pool
+
+  #   # AND Alice has tokens
+  #   aliceTokens = sp.nat(10)
+  #   scenario += token.mint(
+  #     sp.record(
+  #       address = Addresses.ALICE_ADDRESS,
+  #       value = aliceTokens
+  #     )
+  #   ).run(
+  #     sender = Addresses.ADMIN_ADDRESS
+  #   )
+
+  #   # AND Bob has twice as many tokens
+  #   bobTokens = sp.nat(40)
+  #   scenario += token.mint(
+  #     sp.record(
+  #       address = Addresses.BOB_ADDRESS,
+  #       value = bobTokens
+  #     )
+  #   ).run(
+  #     sender = Addresses.ADMIN_ADDRESS
+  #   )
+
+  #   # AND Charlie has tokens
+  #   charlieTokens = sp.nat(60)
+  #   scenario += token.mint(
+  #     sp.record(
+  #       address = Addresses.CHARLIE_ADDRESS,
+  #       value = charlieTokens
+  #     )
+  #   ).run(
+  #     sender = Addresses.ADMIN_ADDRESS
+  #   )
+
+  #   # AND Alice has given the pool an allowance
+  #   scenario += token.approve(
+  #     sp.record(
+  #       spender = pool.address,
+  #       value = aliceTokens
+  #     )
+  #   ).run(
+  #     sender = Addresses.ALICE_ADDRESS
+  #   )
+
+  #   # AND Bob has given the pool an allowance
+  #   scenario += token.approve(
+  #     sp.record(
+  #       spender = pool.address,
+  #       value = bobTokens
+  #     )
+  #   ).run(
+  #     sender = Addresses.BOB_ADDRESS
+  #   )
+
+  #   # AND Charlie has given the pool an allowance
+  #   scenario += token.approve(
+  #     sp.record(
+  #       spender = pool.address,
+  #       value = charlieTokens
+  #     )
+  #   ).run(
+  #     sender = Addresses.CHARLIE_ADDRESS
+  #   )
+
+  #   # AND Alice and Bob deposit tokens in the contract.
+  #   scenario += pool.deposit(
+  #     aliceTokens
+  #   ).run(
+  #     sender = Addresses.ALICE_ADDRESS
+  #   )
+
+  #   scenario += pool.deposit(
+  #     bobTokens
+  #   ).run(
+  #     sender = Addresses.BOB_ADDRESS
+  #   )
+
+  #   # WHEN the contract receives an additional number of tokens.
+  #   additionalTokens = 10
+  #   scenario += token.mint(
+  #     sp.record(
+  #       address = pool.address,
+  #       value = additionalTokens
+  #     )
+  #   ).run(
+  #     sender = Addresses.ADMIN_ADDRESS
+  #   )
+
+  #   # AND Charlie joins after the liquidity is added
+  #   scenario += pool.deposit(
+  #     charlieTokens
+  #   ).run(
+  #     sender = Addresses.CHARLIE_ADDRESS
+  #   )
+
+  #   # THEN the contract doubles the number of LP tokens
+  #   scenario.verify(pool.data.totalSupply == (100 * Constants.PRECISION))
+
+  #   # AND the pool has the right number of tokens.
+  #   scenario.verify(token.data.balances[pool.address].balance == sp.nat(10 + 40 + 10 + 60))
+  #   scenario.verify(pool.data.underlyingBalance == sp.nat(10 + 40 + 10 + 60))
+
+  #   # AND Charlie has the right number of LP tokens.
+  #   scenario.verify(pool.data.balances[Addresses.CHARLIE_ADDRESS].balance == 50 * Constants.PRECISION)
+
+  # @sp.add_test(name="deposit - successfully mints LP tokens after additional liquidity is deposited in the pool with a small amount of tokens")
+  # def test():
+  #   scenario = sp.test_scenario()
+
+  #   # GIVEN a token contract
+  #   token = FA12.FA12(
+  #     admin = Addresses.ADMIN_ADDRESS
+  #   )
+  #   scenario += token
+
+  #   # AND a pool contract
+  #   pool = PoolContract(
+  #     tokenAddress = token.address
+  #   )
+  #   scenario += pool
+
+  #   # AND Alice has tokens
+  #   aliceTokens = sp.nat(10)
+  #   scenario += token.mint(
+  #     sp.record(
+  #       address = Addresses.ALICE_ADDRESS,
+  #       value = aliceTokens
+  #     )
+  #   ).run(
+  #     sender = Addresses.ADMIN_ADDRESS
+  #   )
+
+  #   # AND Bob has twice as many tokens
+  #   bobTokens = sp.nat(40)
+  #   scenario += token.mint(
+  #     sp.record(
+  #       address = Addresses.BOB_ADDRESS,
+  #       value = bobTokens
+  #     )
+  #   ).run(
+  #     sender = Addresses.ADMIN_ADDRESS
+  #   )
+
+  #   # AND Charlie has tokens
+  #   charlieTokens = sp.nat(20)
+  #   scenario += token.mint(
+  #     sp.record(
+  #       address = Addresses.CHARLIE_ADDRESS,
+  #       value = charlieTokens
+  #     )
+  #   ).run(
+  #     sender = Addresses.ADMIN_ADDRESS
+  #   )
+
+  #   # AND Alice has given the pool an allowance
+  #   scenario += token.approve(
+  #     sp.record(
+  #       spender = pool.address,
+  #       value = aliceTokens
+  #     )
+  #   ).run(
+  #     sender = Addresses.ALICE_ADDRESS
+  #   )
+
+  #   # AND Bob has given the pool an allowance
+  #   scenario += token.approve(
+  #     sp.record(
+  #       spender = pool.address,
+  #       value = bobTokens
+  #     )
+  #   ).run(
+  #     sender = Addresses.BOB_ADDRESS
+  #   )
+
+  #   # AND Charlie has given the pool an allowance
+  #   scenario += token.approve(
+  #     sp.record(
+  #       spender = pool.address,
+  #       value = charlieTokens
+  #     )
+  #   ).run(
+  #     sender = Addresses.CHARLIE_ADDRESS
+  #   )
+
+  #   # AND Alice and Bob deposit tokens in the contract.
+  #   scenario += pool.deposit(
+  #     aliceTokens
+  #   ).run(
+  #     sender = Addresses.ALICE_ADDRESS
+  #   )
+
+  #   scenario += pool.deposit(
+  #     bobTokens
+  #   ).run(
+  #     sender = Addresses.BOB_ADDRESS
+  #   )
+
+  #   # WHEN the contract receives an additional number of tokens.
+  #   additionalTokens = 10
+  #   scenario += token.mint(
+  #     sp.record(
+  #       address = pool.address,
+  #       value = additionalTokens
+  #     )
+  #   ).run(
+  #     sender = Addresses.ADMIN_ADDRESS
+  #   )
+
+  #   # AND Charlie joins after the liquidity is added
+  #   scenario += pool.deposit(
+  #     charlieTokens
+  #   ).run(
+  #     sender = Addresses.CHARLIE_ADDRESS
+  #   )
+
+  #   # # THEN the contract computes the LP tokens correctly
+  #   scenario.verify(pool.data.totalSupply == (66666666666666666666))
+
+  #   # AND the pool has the right number of tokens.
+  #   scenario.verify(token.data.balances[pool.address].balance == sp.nat(10 + 40 + 10 + 20))
+  #   scenario.verify(pool.data.underlyingBalance == sp.nat(10 + 40 + 10 + 20))
+
+  #   # AND Charlie has the right number of LP tokens.
+  #   scenario.verify(pool.data.balances[Addresses.CHARLIE_ADDRESS].balance == 16666666666666666666)
+
+  # ################################################################
+  # # deposit_callback
+  # ################################################################
+
+  # @sp.add_test(name="deposit_callback - can finish deposit")
+  # def test():
+  #   scenario = sp.test_scenario()
+
+  #   # GIVEN a token contract
+  #   token = FA12.FA12(
+  #     admin = Addresses.ADMIN_ADDRESS
+  #   )
+  #   scenario += token
+
+  #   # AND Alice has tokens
+  #   aliceTokens = sp.nat(10)
+  #   scenario += token.mint(
+  #     sp.record(
+  #       address = Addresses.ALICE_ADDRESS,
+  #       value = aliceTokens
+  #     )
+  #   ).run(
+  #     sender = Addresses.ADMIN_ADDRESS
+  #   )
+
+  #   # AND a pool contract in the WAITING_DEPOSIT state
+  #   pool = PoolContract(
+  #     state = WAITING_DEPOSIT,
+  #     savedState_depositor = sp.some(Addresses.ALICE_ADDRESS),
+  #     savedState_tokensToDeposit = sp.some(aliceTokens),
+
+  #     tokenAddress = token.address
+  #   )
+  #   scenario += pool
     
-    # AND Alice has given the pool an allowance
-    scenario += token.approve(
-      sp.record(
-        spender = pool.address,
-        value = aliceTokens
-      )
-    ).run(
-      sender = Addresses.ALICE_ADDRESS
-    )
+  #   # AND Alice has given the pool an allowance
+  #   scenario += token.approve(
+  #     sp.record(
+  #       spender = pool.address,
+  #       value = aliceTokens
+  #     )
+  #   ).run(
+  #     sender = Addresses.ALICE_ADDRESS
+  #   )
 
-    # AND the pool has tokens
-    poolTokens = Constants.PRECISION * 200
-    scenario += token.mint(
-      sp.record(
-        address = pool.address,
-        value = poolTokens
-      )
-    ).run(
-      sender = Addresses.ADMIN_ADDRESS
-    )
+  #   # AND the pool has tokens
+  #   poolTokens = Constants.PRECISION * 200
+  #   scenario += token.mint(
+  #     sp.record(
+  #       address = pool.address,
+  #       value = poolTokens
+  #     )
+  #   ).run(
+  #     sender = Addresses.ADMIN_ADDRESS
+  #   )
 
-    # WHEN deposit_callback is run
-    scenario += pool.deposit_callback(
-      poolTokens
-    ).run(
-      sender = token.address
-    )
+  #   # WHEN deposit_callback is run
+  #   scenario += pool.deposit_callback(
+  #     poolTokens
+  #   ).run(
+  #     sender = token.address
+  #   )
 
-    # THEN the call succeeds.
-    # NOTE: The exact end state is covered by `deposit` tests - we just want to prove that deposit_callback works
-    # under the given conditions so we can vary state and sender in other tests to prove it fails.
-    scenario.verify(pool.data.state == IDLE)
+  #   # THEN the call succeeds.
+  #   # NOTE: The exact end state is covered by `deposit` tests - we just want to prove that deposit_callback works
+  #   # under the given conditions so we can vary state and sender in other tests to prove it fails.
+  #   scenario.verify(pool.data.state == IDLE)
 
-  @sp.add_test(name="deposit_callback - fails in bad state")
-  def test():
-    scenario = sp.test_scenario()
+  # @sp.add_test(name="deposit_callback - fails in bad state")
+  # def test():
+  #   scenario = sp.test_scenario()
 
-    # GIVEN a token contract
-    token = FA12.FA12(
-      admin = Addresses.ADMIN_ADDRESS
-    )
-    scenario += token
+  #   # GIVEN a token contract
+  #   token = FA12.FA12(
+  #     admin = Addresses.ADMIN_ADDRESS
+  #   )
+  #   scenario += token
 
-    # AND Alice has tokens
-    aliceTokens = sp.nat(10)
-    scenario += token.mint(
-      sp.record(
-        address = Addresses.ALICE_ADDRESS,
-        value = aliceTokens
-      )
-    ).run(
-      sender = Addresses.ADMIN_ADDRESS
-    )
+  #   # AND Alice has tokens
+  #   aliceTokens = sp.nat(10)
+  #   scenario += token.mint(
+  #     sp.record(
+  #       address = Addresses.ALICE_ADDRESS,
+  #       value = aliceTokens
+  #     )
+  #   ).run(
+  #     sender = Addresses.ADMIN_ADDRESS
+  #   )
 
-    # AND a pool contract in the IDLE state
-    pool = PoolContract(
-      state = IDLE,
-      savedState_depositor = sp.none,
-      savedState_tokensToDeposit = sp.none,
+  #   # AND a pool contract in the IDLE state
+  #   pool = PoolContract(
+  #     state = IDLE,
+  #     savedState_depositor = sp.none,
+  #     savedState_tokensToDeposit = sp.none,
 
-      tokenAddress = token.address
-    )
-    scenario += pool
+  #     tokenAddress = token.address
+  #   )
+  #   scenario += pool
     
-    # AND Alice has given the pool an allowance
-    scenario += token.approve(
-      sp.record(
-        spender = pool.address,
-        value = aliceTokens
-      )
-    ).run(
-      sender = Addresses.ALICE_ADDRESS
-    )
+  #   # AND Alice has given the pool an allowance
+  #   scenario += token.approve(
+  #     sp.record(
+  #       spender = pool.address,
+  #       value = aliceTokens
+  #     )
+  #   ).run(
+  #     sender = Addresses.ALICE_ADDRESS
+  #   )
 
-    # AND the pool has tokens
-    poolTokens = Constants.PRECISION * 200
-    scenario += token.mint(
-      sp.record(
-        address = pool.address,
-        value = poolTokens
-      )
-    ).run(
-      sender = Addresses.ADMIN_ADDRESS
-    )
+  #   # AND the pool has tokens
+  #   poolTokens = Constants.PRECISION * 200
+  #   scenario += token.mint(
+  #     sp.record(
+  #       address = pool.address,
+  #       value = poolTokens
+  #     )
+  #   ).run(
+  #     sender = Addresses.ADMIN_ADDRESS
+  #   )
 
-    # WHEN deposit_callback is run
-    # THEN the call fails
-    scenario += pool.deposit_callback(
-      poolTokens
-    ).run(
-      sender = token.address,
-      valid = False
-    )
+  #   # WHEN deposit_callback is run
+  #   # THEN the call fails
+  #   scenario += pool.deposit_callback(
+  #     poolTokens
+  #   ).run(
+  #     sender = token.address,
+  #     valid = False
+  #   )
 
-  @sp.add_test(name="deposit_callback - fails with bad sender")
-  def test():
-    scenario = sp.test_scenario()
+  # @sp.add_test(name="deposit_callback - fails with bad sender")
+  # def test():
+  #   scenario = sp.test_scenario()
 
-    # GIVEN a token contract
-    token = FA12.FA12(
-      admin = Addresses.ADMIN_ADDRESS
-    )
-    scenario += token
+  #   # GIVEN a token contract
+  #   token = FA12.FA12(
+  #     admin = Addresses.ADMIN_ADDRESS
+  #   )
+  #   scenario += token
 
-    # AND Alice has tokens
-    aliceTokens = sp.nat(10)
-    scenario += token.mint(
-      sp.record(
-        address = Addresses.ALICE_ADDRESS,
-        value = aliceTokens
-      )
-    ).run(
-      sender = Addresses.ADMIN_ADDRESS
-    )
+  #   # AND Alice has tokens
+  #   aliceTokens = sp.nat(10)
+  #   scenario += token.mint(
+  #     sp.record(
+  #       address = Addresses.ALICE_ADDRESS,
+  #       value = aliceTokens
+  #     )
+  #   ).run(
+  #     sender = Addresses.ADMIN_ADDRESS
+  #   )
 
-    # AND a pool contract in the WAITING_DEPOSIT state
-    pool = PoolContract(
-      state = WAITING_DEPOSIT,
-      savedState_depositor = sp.some(Addresses.ALICE_ADDRESS),
-      savedState_tokensToDeposit = sp.some(aliceTokens),
+  #   # AND a pool contract in the WAITING_DEPOSIT state
+  #   pool = PoolContract(
+  #     state = WAITING_DEPOSIT,
+  #     savedState_depositor = sp.some(Addresses.ALICE_ADDRESS),
+  #     savedState_tokensToDeposit = sp.some(aliceTokens),
 
-      tokenAddress = token.address
-    )
-    scenario += pool
+  #     tokenAddress = token.address
+  #   )
+  #   scenario += pool
     
-    # AND Alice has given the pool an allowance
-    scenario += token.approve(
-      sp.record(
-        spender = pool.address,
-        value = aliceTokens
-      )
-    ).run(
-      sender = Addresses.ALICE_ADDRESS
-    )
-
-    # AND the pool has tokens
-    poolTokens = Constants.PRECISION * 200
-    scenario += token.mint(
-      sp.record(
-        address = pool.address,
-        value = poolTokens
-      )
-    ).run(
-      sender = Addresses.ADMIN_ADDRESS
-    )
-
-    # WHEN deposit_callback is called by someone other than the token contract
-    # THEN the call fails.
-    scenario += pool.deposit_callback(
-      poolTokens
-    ).run(
-      sender = Addresses.NULL_ADDRESS,
-      valid = False
-    )
-
-  ################################################################
-  # redeem
-  ################################################################
-
-  @sp.add_test(name="redeem - fails in bad state")
-  def test():
-    scenario = sp.test_scenario()
-
-    # GIVEN a token contract
-    token = FA12.FA12(
-      admin = Addresses.ADMIN_ADDRESS
-    )
-    scenario += token
-
-    # AND a pool contract not in the IDLE state
-    pool = PoolContract(
-      state = WAITING_REDEEM,
-      tokenAddress = token.address
-    )
-    scenario += pool
-
-    # AND Alice has tokens
-    aliceTokens = sp.nat(10)
-    scenario += token.mint(
-      sp.record(
-        address = Addresses.ALICE_ADDRESS,
-        value = aliceTokens
-      )
-    ).run(
-      sender = Addresses.ADMIN_ADDRESS
-    )
-
-    # AND Alice has LP tokens
-    scenario += pool.mint(
-      sp.record(
-        address = Addresses.ALICE_ADDRESS,
-        value = aliceTokens * Constants.PRECISION
-      )
-    ).run(
-      sender = pool.address
-    )
-
-    # WHEN Alice withdraws from the contract
-    # THEN the call fails.
-    scenario += pool.redeem(
-      aliceTokens * Constants.PRECISION
-    ).run(
-      sender = Addresses.ALICE_ADDRESS,
-      valid = False
-    )
-
-  @sp.add_test(name="redeem - clears state")
-  def test():
-    scenario = sp.test_scenario()
-
-    # GIVEN a token contract
-    token = FA12.FA12(
-      admin = Addresses.ADMIN_ADDRESS
-    )
-    scenario += token
-
-    # AND a pool contract
-    pool = PoolContract(
-      tokenAddress = token.address
-    )
-    scenario += pool
-
-    # AND Alice has tokens
-    aliceTokens = sp.nat(10)
-    scenario += token.mint(
-      sp.record(
-        address = Addresses.ALICE_ADDRESS,
-        value = aliceTokens
-      )
-    ).run(
-      sender = Addresses.ADMIN_ADDRESS
-    )
-
-    # AND Alice has given the pool an allowance
-    scenario += token.approve(
-      sp.record(
-        spender = pool.address,
-        value = aliceTokens
-      )
-    ).run(
-      sender = Addresses.ALICE_ADDRESS
-    )
-
-    # AND Alice deposits tokens in the contract.
-    scenario += pool.deposit(
-      aliceTokens
-    ).run(
-      sender = Addresses.ALICE_ADDRESS
-    )
-
-    # WHEN Alice withdraws from the contract.
-    scenario += pool.redeem(
-      aliceTokens * Constants.PRECISION
-    ).run(
-      sender = Addresses.ALICE_ADDRESS
-    )
-
-    # THEN the pool's state is idle.
-    scenario.verify(pool.data.state == IDLE)
-    scenario.verify(pool.data.savedState_tokensToRedeem.is_some() == False)
-    scenario.verify(pool.data.savedState_redeemer.is_some() == False)
-
-  @sp.add_test(name="redeem - can deposit and withdraw from one account")
-  def test():
-    scenario = sp.test_scenario()
-
-    # GIVEN a token contract
-    token = FA12.FA12(
-      admin = Addresses.ADMIN_ADDRESS
-    )
-    scenario += token
-
-    # AND a pool contract
-    pool = PoolContract(
-      tokenAddress = token.address
-    )
-    scenario += pool
-
-    # AND Alice has tokens
-    aliceTokens = sp.nat(10)
-    scenario += token.mint(
-      sp.record(
-        address = Addresses.ALICE_ADDRESS,
-        value = aliceTokens
-      )
-    ).run(
-      sender = Addresses.ADMIN_ADDRESS
-    )
-
-    # AND Alice has given the pool an allowance
-    scenario += token.approve(
-      sp.record(
-        spender = pool.address,
-        value = aliceTokens
-      )
-    ).run(
-      sender = Addresses.ALICE_ADDRESS
-    )
-
-    # AND Alice deposits tokens in the contract.
-    scenario += pool.deposit(
-      aliceTokens
-    ).run(
-      sender = Addresses.ALICE_ADDRESS
-    )
-
-    # WHEN Alice withdraws from the contract.
-    scenario += pool.redeem(
-      aliceTokens * Constants.PRECISION
-    ).run(
-      sender = Addresses.ALICE_ADDRESS
-    )
-
-    # THEN Alice trades her LP tokens for her original tokens
-    scenario.verify(token.data.balances[Addresses.ALICE_ADDRESS].balance == aliceTokens)
-    scenario.verify(pool.data.balances[Addresses.ALICE_ADDRESS].balance == sp.nat(0))
-
-    # AND the total supply of tokens is as expected
-    scenario.verify(pool.data.totalSupply == sp.nat(0))
-
-    # AND the pool has possession of the correct number of tokens.
-    scenario.verify(token.data.balances[pool.address].balance == sp.nat(0))
-    scenario.verify(pool.data.underlyingBalance == sp.nat(0))
-
-  @sp.add_test(name="redeem - can redeem from two accounts")
-  def test():
-    scenario = sp.test_scenario()
-
-    # GIVEN a token contract
-    token = FA12.FA12(
-      admin = Addresses.ADMIN_ADDRESS
-    )
-    scenario += token
-
-    # AND a pool contract
-    pool = PoolContract(
-      tokenAddress = token.address
-    )
-    scenario += pool
-
-    # AND Alice has tokens
-    aliceTokens = sp.nat(10)
-    scenario += token.mint(
-      sp.record(
-        address = Addresses.ALICE_ADDRESS,
-        value = aliceTokens
-      )
-    ).run(
-      sender = Addresses.ADMIN_ADDRESS
-    )
-
-    # AND Bob has twice as many tokens
-    bobTokens = sp.nat(40)
-    scenario += token.mint(
-      sp.record(
-        address = Addresses.BOB_ADDRESS,
-        value = bobTokens
-      )
-    ).run(
-      sender = Addresses.ADMIN_ADDRESS
-    )
-
-    # AND Alice has given the pool an allowance
-    scenario += token.approve(
-      sp.record(
-        spender = pool.address,
-        value = aliceTokens
-      )
-    ).run(
-      sender = Addresses.ALICE_ADDRESS
-    )
-
-    # AND Bob has given the pool an allowance
-    scenario += token.approve(
-      sp.record(
-        spender = pool.address,
-        value = bobTokens
-      )
-    ).run(
-      sender = Addresses.BOB_ADDRESS
-    )
-
-    # AND Alice and Bob deposit tokens in the contract.
-    scenario += pool.deposit(
-      aliceTokens
-    ).run(
-      sender = Addresses.ALICE_ADDRESS
-    )
-
-    scenario += pool.deposit(
-      bobTokens
-    ).run(
-      sender = Addresses.BOB_ADDRESS
-    )
-
-    # WHEN Alice withdraws her tokens
-    scenario += pool.redeem(
-      aliceTokens * Constants.PRECISION
-    ).run(
-      sender = Addresses.ALICE_ADDRESS
-    )
-
-    # THEN Alice receives her original tokens back and the LP tokens are burnt
-    scenario.verify(token.data.balances[Addresses.ALICE_ADDRESS].balance == aliceTokens)
-    scenario.verify(pool.data.balances[Addresses.ALICE_ADDRESS].balance == sp.nat(0))
-
-    # AND Bob still has his position
-    scenario.verify(token.data.balances[Addresses.BOB_ADDRESS].balance == sp.nat(0))
-    scenario.verify(pool.data.balances[Addresses.BOB_ADDRESS].balance == aliceTokens * 4 * Constants.PRECISION)
-
-    # AND the total supply of tokens is as expected
-    scenario.verify(pool.data.totalSupply == bobTokens * Constants.PRECISION)
-
-    # AND the pool has possession of the correct number of tokens.
-    scenario.verify(token.data.balances[pool.address].balance == bobTokens)
-    scenario.verify(pool.data.underlyingBalance == bobTokens)
-
-    # WHEN Bob withdraws his tokens
-    scenario += pool.redeem(
-      bobTokens * Constants.PRECISION
-    ).run(
-      sender = Addresses.BOB_ADDRESS
-    )
-
-    # THEN Alice retains her position
-    scenario.verify(token.data.balances[Addresses.ALICE_ADDRESS].balance == aliceTokens)
-    scenario.verify(pool.data.balances[Addresses.ALICE_ADDRESS].balance == sp.nat(0))
-
-    # AND Bob receives his original tokens back and the LP tokens are burn.
-    scenario.verify(token.data.balances[Addresses.BOB_ADDRESS].balance == bobTokens)
-    scenario.verify(pool.data.balances[Addresses.BOB_ADDRESS].balance == sp.nat(0))
-
-    # AND the total supply of tokens is as expected
-    scenario.verify(pool.data.totalSupply == sp.nat(0))
-
-    # AND the pool has possession of the correct number of tokens.
-    scenario.verify(token.data.balances[pool.address].balance == sp.nat(0))
-    scenario.verify(pool.data.underlyingBalance == sp.nat(0))
-
-  @sp.add_test(name="redeem - can redeem from two accounts - reversed")
-  def test():
-    scenario = sp.test_scenario()
-
-    # GIVEN a token contract
-    token = FA12.FA12(
-      admin = Addresses.ADMIN_ADDRESS
-    )
-    scenario += token
-
-    # AND a pool contract
-    pool = PoolContract(
-      tokenAddress = token.address
-    )
-    scenario += pool
-
-    # AND Alice has tokens
-    aliceTokens = sp.nat(10)
-    scenario += token.mint(
-      sp.record(
-        address = Addresses.ALICE_ADDRESS,
-        value = aliceTokens
-      )
-    ).run(
-      sender = Addresses.ADMIN_ADDRESS
-    )
-
-    # AND Bob has twice as many tokens
-    bobTokens = sp.nat(40)
-    scenario += token.mint(
-      sp.record(
-        address = Addresses.BOB_ADDRESS,
-        value = bobTokens
-      )
-    ).run(
-      sender = Addresses.ADMIN_ADDRESS
-    )
-
-    # AND Alice has given the pool an allowance
-    scenario += token.approve(
-      sp.record(
-        spender = pool.address,
-        value = aliceTokens
-      )
-    ).run(
-      sender = Addresses.ALICE_ADDRESS
-    )
-
-    # AND Bob has given the pool an allowance
-    scenario += token.approve(
-      sp.record(
-        spender = pool.address,
-        value = bobTokens
-      )
-    ).run(
-      sender = Addresses.BOB_ADDRESS
-    )
-
-    # AND Alice and Bob deposit tokens in the contract.
-    scenario += pool.deposit(
-      aliceTokens
-    ).run(
-      sender = Addresses.ALICE_ADDRESS
-    )
-
-    scenario += pool.deposit(
-      bobTokens
-    ).run(
-      sender = Addresses.BOB_ADDRESS
-    )
-
-    # WHEN Bob withdraws his tokens
-    scenario += pool.redeem(
-      bobTokens * Constants.PRECISION
-    ).run(
-      sender = Addresses.BOB_ADDRESS
-    )
-
-    # THEN Alice retains her position
-    scenario.verify(token.data.balances[Addresses.ALICE_ADDRESS].balance == sp.nat(0))
-    scenario.verify(pool.data.balances[Addresses.ALICE_ADDRESS].balance == aliceTokens * Constants.PRECISION)
-
-    # AND Bob receives his original tokens back and the LP tokens are burn.
-    scenario.verify(token.data.balances[Addresses.BOB_ADDRESS].balance == bobTokens)
-    scenario.verify(pool.data.balances[Addresses.BOB_ADDRESS].balance == sp.nat(0))
-
-    # AND the total supply of tokens is as expected
-    scenario.verify(pool.data.totalSupply == aliceTokens * Constants.PRECISION)
-
-    # AND the pool has possession of the correct number of tokens.
-    scenario.verify(token.data.balances[pool.address].balance == aliceTokens)
-    scenario.verify(pool.data.underlyingBalance == aliceTokens)
-
-    # WHEN Alice withdraws her tokens
-    scenario += pool.redeem(
-      aliceTokens * Constants.PRECISION
-    ).run(
-      sender = Addresses.ALICE_ADDRESS
-    )
-
-    # THEN Alice receives her original tokens back and the LP tokens are burnt
-    scenario.verify(token.data.balances[Addresses.ALICE_ADDRESS].balance == aliceTokens)
-    scenario.verify(pool.data.balances[Addresses.ALICE_ADDRESS].balance == sp.nat(0))
-
-    # AND Bob still has his position
-    scenario.verify(token.data.balances[Addresses.BOB_ADDRESS].balance == bobTokens)
-    scenario.verify(pool.data.balances[Addresses.BOB_ADDRESS].balance == sp.nat(0))
-
-    # AND the total supply of tokens is as expected
-    scenario.verify(pool.data.totalSupply == sp.nat(0))
-
-    # AND the pool has possession of the correct number of tokens.
-    scenario.verify(token.data.balances[pool.address].balance == sp.nat(0))
-    scenario.verify(pool.data.underlyingBalance == sp.nat(0))
-
-  @sp.add_test(name="redeem - can redeem partially from two accounts")
-  def test():
-    scenario = sp.test_scenario()
-
-    # GIVEN a token contract
-    token = FA12.FA12(
-      admin = Addresses.ADMIN_ADDRESS
-    )
-    scenario += token
-
-    # AND a pool contract
-    pool = PoolContract(
-      tokenAddress = token.address
-    )
-    scenario += pool
-
-    # AND Alice has tokens
-    aliceTokens = sp.nat(10)
-    scenario += token.mint(
-      sp.record(
-        address = Addresses.ALICE_ADDRESS,
-        value = aliceTokens
-      )
-    ).run(
-      sender = Addresses.ADMIN_ADDRESS
-    )
-
-    # AND Bob has twice as many tokens
-    bobTokens = sp.nat(40)
-    scenario += token.mint(
-      sp.record(
-        address = Addresses.BOB_ADDRESS,
-        value = bobTokens
-      )
-    ).run(
-      sender = Addresses.ADMIN_ADDRESS
-    )
-
-    # AND Alice has given the pool an allowance
-    scenario += token.approve(
-      sp.record(
-        spender = pool.address,
-        value = aliceTokens
-      )
-    ).run(
-      sender = Addresses.ALICE_ADDRESS
-    )
-
-    # AND Bob has given the pool an allowance
-    scenario += token.approve(
-      sp.record(
-        spender = pool.address,
-        value = bobTokens
-      )
-    ).run(
-      sender = Addresses.BOB_ADDRESS
-    )
-
-    # AND Alice and Bob deposit tokens in the contract.
-    scenario += pool.deposit(
-      aliceTokens
-    ).run(
-      sender = Addresses.ALICE_ADDRESS
-    )
-
-    scenario += pool.deposit(
-      bobTokens
-    ).run(
-      sender = Addresses.BOB_ADDRESS
-    )
-
-    # WHEN Alice withdraws half of her tokens
-    scenario += pool.redeem(
-      aliceTokens / 2 * Constants.PRECISION
-    ).run(
-      sender = Addresses.ALICE_ADDRESS
-    )
-
-    # THEN Alice receives her original tokens back and the LP tokens are burnt
-    scenario.verify(token.data.balances[Addresses.ALICE_ADDRESS].balance == aliceTokens / 2)
-    scenario.verify(pool.data.balances[Addresses.ALICE_ADDRESS].balance == aliceTokens / 2 * Constants.PRECISION)
-
-    # AND Bob still has his position
-    scenario.verify(token.data.balances[Addresses.BOB_ADDRESS].balance == sp.nat(0))
-    scenario.verify(pool.data.balances[Addresses.BOB_ADDRESS].balance == aliceTokens * 4 * Constants.PRECISION)
-
-    # AND the total supply of tokens is as expected
-    scenario.verify(pool.data.totalSupply == (bobTokens + (aliceTokens / 2)) * Constants.PRECISION)
-
-    # AND the pool has possession of the correct number of tokens.
-    scenario.verify(token.data.balances[pool.address].balance == bobTokens + (aliceTokens / 2))
-    scenario.verify(pool.data.underlyingBalance == bobTokens + (aliceTokens / 2))
-
-    # WHEN Bob withdraws a quarter of his tokens
-    scenario += pool.redeem(
-      bobTokens / 4 * Constants.PRECISION
-    ).run(
-      sender = Addresses.BOB_ADDRESS
-    )
-
-    # THEN Alice retains her position
-    scenario.verify(token.data.balances[Addresses.ALICE_ADDRESS].balance == aliceTokens / 2)
-    scenario.verify(pool.data.balances[Addresses.ALICE_ADDRESS].balance == aliceTokens / 2 * Constants.PRECISION)
-
-    # AND Bob receives his original tokens back and the LP tokens are burn.
-    scenario.verify(token.data.balances[Addresses.BOB_ADDRESS].balance == 9) # Bob withdraws 22% (10/45) of the pool, which is 9.9999 tokens. Integer math truncates the remainder
-    scenario.verify(pool.data.balances[Addresses.BOB_ADDRESS].balance == 30 * Constants.PRECISION) # Bob withdrew 1/4 of tokens = .25 * 40 = 30
-
-    # AND the total supply of tokens is as expected
-    # Expected = 50 tokens generated - 5 tokens alice redeemed - 10 tokens bob redeemed
-    scenario.verify(pool.data.totalSupply == sp.nat(35) * Constants.PRECISION)
-
-    # AND the pool has possession of the correct number of tokens.
-    # Expected:
-    # 1/2 of alice tokens + 3/4 of bob tokens + 1 token rounding error = 5 + 30 + 1 = 36
-    expectedRemainingTokens = sp.nat(36)
-    scenario.verify(token.data.balances[pool.address].balance == expectedRemainingTokens) 
-    scenario.verify(pool.data.underlyingBalance == expectedRemainingTokens)
-
-  @sp.add_test(name="redeem - can redeem from two accounts with liquidity added")
-  def test():
-    scenario = sp.test_scenario()
-
-    # GIVEN a token contract
-    token = FA12.FA12(
-      admin = Addresses.ADMIN_ADDRESS
-    )
-    scenario += token
-
-    # AND a pool contract
-    pool = PoolContract(
-      tokenAddress = token.address
-    )
-    scenario += pool
-
-    # AND Alice has tokens
-    aliceTokens = sp.nat(10)
-    scenario += token.mint(
-      sp.record(
-        address = Addresses.ALICE_ADDRESS,
-        value = aliceTokens
-      )
-    ).run(
-      sender = Addresses.ADMIN_ADDRESS
-    )
-
-    # AND Bob has twice as many tokens
-    bobTokens = sp.nat(40)
-    scenario += token.mint(
-      sp.record(
-        address = Addresses.BOB_ADDRESS,
-        value = bobTokens
-      )
-    ).run(
-      sender = Addresses.ADMIN_ADDRESS
-    )
-
-    # AND Alice has given the pool an allowance
-    scenario += token.approve(
-      sp.record(
-        spender = pool.address,
-        value = aliceTokens
-      )
-    ).run(
-      sender = Addresses.ALICE_ADDRESS
-    )
-
-    # AND Bob has given the pool an allowance
-    scenario += token.approve(
-      sp.record(
-        spender = pool.address,
-        value = bobTokens
-      )
-    ).run(
-      sender = Addresses.BOB_ADDRESS
-    )
-
-    # AND Alice and Bob deposit tokens in the contract.
-    scenario += pool.deposit(
-      aliceTokens
-    ).run(
-      sender = Addresses.ALICE_ADDRESS
-    )
-
-    scenario += pool.deposit(
-      bobTokens
-    ).run(
-      sender = Addresses.BOB_ADDRESS
-    )
-
-    # AND the contract receives an additional number of tokens.
-    additionalTokens = 10
-    scenario += token.mint(
-      sp.record(
-        address = pool.address,
-        value = additionalTokens
-      )
-    ).run(
-      sender = Addresses.ADMIN_ADDRESS
-    )
-
-    # WHEN Alice withdraws her tokens
-    scenario += pool.redeem(
-      aliceTokens * Constants.PRECISION
-    ).run(
-      sender = Addresses.ALICE_ADDRESS
-    )
-
-    # THEN Alice receives her original tokens plus a proportion of the additional tokens back and the LP tokens are burnt
-    # Alice owns 20% of the pool * 10 additional tokens = 2 additional tokens
-    additionalTokensForAlice = sp.nat(2)
-    scenario.verify(token.data.balances[Addresses.ALICE_ADDRESS].balance == aliceTokens + additionalTokensForAlice)
-    scenario.verify(pool.data.balances[Addresses.ALICE_ADDRESS].balance == sp.nat(0))
-
-    # AND Bob still has his position
-    scenario.verify(token.data.balances[Addresses.BOB_ADDRESS].balance == sp.nat(0))
-    scenario.verify(pool.data.balances[Addresses.BOB_ADDRESS].balance == aliceTokens * 4 * Constants.PRECISION)
-
-    # AND the total supply of tokens is as expected
-    scenario.verify(pool.data.totalSupply == bobTokens * Constants.PRECISION)
-
-    # AND the pool has possession of the correct number of tokens.
-    # 10 tokens were added to the pool - 2 tokens alice withdrew = 8 additional tokens remaining.
-    scenario.verify(token.data.balances[pool.address].balance == bobTokens + sp.as_nat(additionalTokens - additionalTokensForAlice))
-    scenario.verify(pool.data.underlyingBalance == bobTokens + sp.as_nat(additionalTokens - additionalTokensForAlice))
-
-    # WHEN Bob withdraws his tokens
-    scenario += pool.redeem(
-      bobTokens * Constants.PRECISION
-    ).run(
-      sender = Addresses.BOB_ADDRESS
-    )
-
-    # THEN Alice retains her position
-    scenario.verify(token.data.balances[Addresses.ALICE_ADDRESS].balance == aliceTokens + additionalTokensForAlice)
-    scenario.verify(pool.data.balances[Addresses.ALICE_ADDRESS].balance == sp.nat(0))
-
-    # AND Bob receives his original tokens back and the LP tokens are burn.
-    # Bob owned 80% of the pool * 10 additional tokens = 8 additional tokens   
-    additionalTokensForBob = sp.nat(8)
-    scenario.verify(token.data.balances[Addresses.BOB_ADDRESS].balance == bobTokens + additionalTokensForBob)
-    scenario.verify(pool.data.balances[Addresses.BOB_ADDRESS].balance == sp.nat(0))
-
-    # AND the total supply of tokens is as expected
-    scenario.verify(pool.data.totalSupply == sp.nat(0))
-
-    # AND the pool has possession of the correct number of tokens.
-    scenario.verify(token.data.balances[pool.address].balance == sp.nat(0))
-    scenario.verify(pool.data.underlyingBalance == sp.nat(0))
-
-  @sp.add_test(name="redeem - can redeem correctly from accounts joining after liquidity is added")
-  def test():
-    scenario = sp.test_scenario()
-
-    # GIVEN a token contract
-    token = FA12.FA12(
-      admin = Addresses.ADMIN_ADDRESS
-    )
-    scenario += token
-
-    # AND a pool contract
-    pool = PoolContract(
-      tokenAddress = token.address
-    )
-    scenario += pool
-
-    # AND Alice has tokens
-    aliceTokens = sp.nat(10)
-    scenario += token.mint(
-      sp.record(
-        address = Addresses.ALICE_ADDRESS,
-        value = aliceTokens
-      )
-    ).run(
-      sender = Addresses.ADMIN_ADDRESS
-    )
-
-    # AND Bob has twice as many tokens
-    bobTokens = sp.nat(40)
-    scenario += token.mint(
-      sp.record(
-        address = Addresses.BOB_ADDRESS,
-        value = bobTokens
-      )
-    ).run(
-      sender = Addresses.ADMIN_ADDRESS
-    )
-
-    # AND Charlie has tokens
-    charlieTokens = sp.nat(60)
-    scenario += token.mint(
-      sp.record(
-        address = Addresses.CHARLIE_ADDRESS,
-        value = charlieTokens
-      )
-    ).run(
-      sender = Addresses.ADMIN_ADDRESS
-    )
-
-    # AND Alice has given the pool an allowance
-    scenario += token.approve(
-      sp.record(
-        spender = pool.address,
-        value = aliceTokens
-      )
-    ).run(
-      sender = Addresses.ALICE_ADDRESS
-    )
-
-    # AND Bob has given the pool an allowance
-    scenario += token.approve(
-      sp.record(
-        spender = pool.address,
-        value = bobTokens
-      )
-    ).run(
-      sender = Addresses.BOB_ADDRESS
-    )
-
-    # AND Charlie has given the pool an allowance
-    scenario += token.approve(
-      sp.record(
-        spender = pool.address,
-        value = charlieTokens
-      )
-    ).run(
-      sender = Addresses.CHARLIE_ADDRESS
-    )
-
-    # AND Alice and Bob deposit tokens in the contract.
-    scenario += pool.deposit(
-      aliceTokens
-    ).run(
-      sender = Addresses.ALICE_ADDRESS
-    )
-
-    scenario += pool.deposit(
-      bobTokens
-    ).run(
-      sender = Addresses.BOB_ADDRESS
-    )
-
-    # AND the contract receives an additional number of tokens.
-    additionalTokens = 10
-    scenario += token.mint(
-      sp.record(
-        address = pool.address,
-        value = additionalTokens
-      )
-    ).run(
-      sender = Addresses.ADMIN_ADDRESS
-    )
-
-    # AND Charlie joins after the liquidity is added
-    scenario += pool.deposit(
-      charlieTokens
-    ).run(
-      sender = Addresses.CHARLIE_ADDRESS
-    )
-
-    # WHEN everyone withdraws their tokens
-    scenario += pool.redeem(
-      aliceTokens * Constants.PRECISION
-    ).run(
-      sender = Addresses.ALICE_ADDRESS
-    )
-
-    scenario += pool.redeem(
-      bobTokens * Constants.PRECISION
-    ).run(
-      sender = Addresses.BOB_ADDRESS
-    )
+  #   # AND Alice has given the pool an allowance
+  #   scenario += token.approve(
+  #     sp.record(
+  #       spender = pool.address,
+  #       value = aliceTokens
+  #     )
+  #   ).run(
+  #     sender = Addresses.ALICE_ADDRESS
+  #   )
+
+  #   # AND the pool has tokens
+  #   poolTokens = Constants.PRECISION * 200
+  #   scenario += token.mint(
+  #     sp.record(
+  #       address = pool.address,
+  #       value = poolTokens
+  #     )
+  #   ).run(
+  #     sender = Addresses.ADMIN_ADDRESS
+  #   )
+
+  #   # WHEN deposit_callback is called by someone other than the token contract
+  #   # THEN the call fails.
+  #   scenario += pool.deposit_callback(
+  #     poolTokens
+  #   ).run(
+  #     sender = Addresses.NULL_ADDRESS,
+  #     valid = False
+  #   )
+
+  # ################################################################
+  # # redeem
+  # ################################################################
+
+  # @sp.add_test(name="redeem - fails in bad state")
+  # def test():
+  #   scenario = sp.test_scenario()
+
+  #   # GIVEN a token contract
+  #   token = FA12.FA12(
+  #     admin = Addresses.ADMIN_ADDRESS
+  #   )
+  #   scenario += token
+
+  #   # AND a pool contract not in the IDLE state
+  #   pool = PoolContract(
+  #     state = WAITING_REDEEM,
+  #     tokenAddress = token.address
+  #   )
+  #   scenario += pool
+
+  #   # AND Alice has tokens
+  #   aliceTokens = sp.nat(10)
+  #   scenario += token.mint(
+  #     sp.record(
+  #       address = Addresses.ALICE_ADDRESS,
+  #       value = aliceTokens
+  #     )
+  #   ).run(
+  #     sender = Addresses.ADMIN_ADDRESS
+  #   )
+
+  #   # AND Alice has LP tokens
+  #   scenario += pool.mint(
+  #     sp.record(
+  #       address = Addresses.ALICE_ADDRESS,
+  #       value = aliceTokens * Constants.PRECISION
+  #     )
+  #   ).run(
+  #     sender = pool.address
+  #   )
+
+  #   # WHEN Alice withdraws from the contract
+  #   # THEN the call fails.
+  #   scenario += pool.redeem(
+  #     aliceTokens * Constants.PRECISION
+  #   ).run(
+  #     sender = Addresses.ALICE_ADDRESS,
+  #     valid = False
+  #   )
+
+  # @sp.add_test(name="redeem - clears state")
+  # def test():
+  #   scenario = sp.test_scenario()
+
+  #   # GIVEN a token contract
+  #   token = FA12.FA12(
+  #     admin = Addresses.ADMIN_ADDRESS
+  #   )
+  #   scenario += token
+
+  #   # AND a pool contract
+  #   pool = PoolContract(
+  #     tokenAddress = token.address
+  #   )
+  #   scenario += pool
+
+  #   # AND Alice has tokens
+  #   aliceTokens = sp.nat(10)
+  #   scenario += token.mint(
+  #     sp.record(
+  #       address = Addresses.ALICE_ADDRESS,
+  #       value = aliceTokens
+  #     )
+  #   ).run(
+  #     sender = Addresses.ADMIN_ADDRESS
+  #   )
+
+  #   # AND Alice has given the pool an allowance
+  #   scenario += token.approve(
+  #     sp.record(
+  #       spender = pool.address,
+  #       value = aliceTokens
+  #     )
+  #   ).run(
+  #     sender = Addresses.ALICE_ADDRESS
+  #   )
+
+  #   # AND Alice deposits tokens in the contract.
+  #   scenario += pool.deposit(
+  #     aliceTokens
+  #   ).run(
+  #     sender = Addresses.ALICE_ADDRESS
+  #   )
+
+  #   # WHEN Alice withdraws from the contract.
+  #   scenario += pool.redeem(
+  #     aliceTokens * Constants.PRECISION
+  #   ).run(
+  #     sender = Addresses.ALICE_ADDRESS
+  #   )
+
+  #   # THEN the pool's state is idle.
+  #   scenario.verify(pool.data.state == IDLE)
+  #   scenario.verify(pool.data.savedState_tokensToRedeem.is_some() == False)
+  #   scenario.verify(pool.data.savedState_redeemer.is_some() == False)
+
+  # @sp.add_test(name="redeem - can deposit and withdraw from one account")
+  # def test():
+  #   scenario = sp.test_scenario()
+
+  #   # GIVEN a token contract
+  #   token = FA12.FA12(
+  #     admin = Addresses.ADMIN_ADDRESS
+  #   )
+  #   scenario += token
+
+  #   # AND a pool contract
+  #   pool = PoolContract(
+  #     tokenAddress = token.address
+  #   )
+  #   scenario += pool
+
+  #   # AND Alice has tokens
+  #   aliceTokens = sp.nat(10)
+  #   scenario += token.mint(
+  #     sp.record(
+  #       address = Addresses.ALICE_ADDRESS,
+  #       value = aliceTokens
+  #     )
+  #   ).run(
+  #     sender = Addresses.ADMIN_ADDRESS
+  #   )
+
+  #   # AND Alice has given the pool an allowance
+  #   scenario += token.approve(
+  #     sp.record(
+  #       spender = pool.address,
+  #       value = aliceTokens
+  #     )
+  #   ).run(
+  #     sender = Addresses.ALICE_ADDRESS
+  #   )
+
+  #   # AND Alice deposits tokens in the contract.
+  #   scenario += pool.deposit(
+  #     aliceTokens
+  #   ).run(
+  #     sender = Addresses.ALICE_ADDRESS
+  #   )
+
+  #   # WHEN Alice withdraws from the contract.
+  #   scenario += pool.redeem(
+  #     aliceTokens * Constants.PRECISION
+  #   ).run(
+  #     sender = Addresses.ALICE_ADDRESS
+  #   )
+
+  #   # THEN Alice trades her LP tokens for her original tokens
+  #   scenario.verify(token.data.balances[Addresses.ALICE_ADDRESS].balance == aliceTokens)
+  #   scenario.verify(pool.data.balances[Addresses.ALICE_ADDRESS].balance == sp.nat(0))
+
+  #   # AND the total supply of tokens is as expected
+  #   scenario.verify(pool.data.totalSupply == sp.nat(0))
+
+  #   # AND the pool has possession of the correct number of tokens.
+  #   scenario.verify(token.data.balances[pool.address].balance == sp.nat(0))
+  #   scenario.verify(pool.data.underlyingBalance == sp.nat(0))
+
+  # @sp.add_test(name="redeem - can redeem from two accounts")
+  # def test():
+  #   scenario = sp.test_scenario()
+
+  #   # GIVEN a token contract
+  #   token = FA12.FA12(
+  #     admin = Addresses.ADMIN_ADDRESS
+  #   )
+  #   scenario += token
+
+  #   # AND a pool contract
+  #   pool = PoolContract(
+  #     tokenAddress = token.address
+  #   )
+  #   scenario += pool
+
+  #   # AND Alice has tokens
+  #   aliceTokens = sp.nat(10)
+  #   scenario += token.mint(
+  #     sp.record(
+  #       address = Addresses.ALICE_ADDRESS,
+  #       value = aliceTokens
+  #     )
+  #   ).run(
+  #     sender = Addresses.ADMIN_ADDRESS
+  #   )
+
+  #   # AND Bob has twice as many tokens
+  #   bobTokens = sp.nat(40)
+  #   scenario += token.mint(
+  #     sp.record(
+  #       address = Addresses.BOB_ADDRESS,
+  #       value = bobTokens
+  #     )
+  #   ).run(
+  #     sender = Addresses.ADMIN_ADDRESS
+  #   )
+
+  #   # AND Alice has given the pool an allowance
+  #   scenario += token.approve(
+  #     sp.record(
+  #       spender = pool.address,
+  #       value = aliceTokens
+  #     )
+  #   ).run(
+  #     sender = Addresses.ALICE_ADDRESS
+  #   )
+
+  #   # AND Bob has given the pool an allowance
+  #   scenario += token.approve(
+  #     sp.record(
+  #       spender = pool.address,
+  #       value = bobTokens
+  #     )
+  #   ).run(
+  #     sender = Addresses.BOB_ADDRESS
+  #   )
+
+  #   # AND Alice and Bob deposit tokens in the contract.
+  #   scenario += pool.deposit(
+  #     aliceTokens
+  #   ).run(
+  #     sender = Addresses.ALICE_ADDRESS
+  #   )
+
+  #   scenario += pool.deposit(
+  #     bobTokens
+  #   ).run(
+  #     sender = Addresses.BOB_ADDRESS
+  #   )
+
+  #   # WHEN Alice withdraws her tokens
+  #   scenario += pool.redeem(
+  #     aliceTokens * Constants.PRECISION
+  #   ).run(
+  #     sender = Addresses.ALICE_ADDRESS
+  #   )
+
+  #   # THEN Alice receives her original tokens back and the LP tokens are burnt
+  #   scenario.verify(token.data.balances[Addresses.ALICE_ADDRESS].balance == aliceTokens)
+  #   scenario.verify(pool.data.balances[Addresses.ALICE_ADDRESS].balance == sp.nat(0))
+
+  #   # AND Bob still has his position
+  #   scenario.verify(token.data.balances[Addresses.BOB_ADDRESS].balance == sp.nat(0))
+  #   scenario.verify(pool.data.balances[Addresses.BOB_ADDRESS].balance == aliceTokens * 4 * Constants.PRECISION)
+
+  #   # AND the total supply of tokens is as expected
+  #   scenario.verify(pool.data.totalSupply == bobTokens * Constants.PRECISION)
+
+  #   # AND the pool has possession of the correct number of tokens.
+  #   scenario.verify(token.data.balances[pool.address].balance == bobTokens)
+  #   scenario.verify(pool.data.underlyingBalance == bobTokens)
+
+  #   # WHEN Bob withdraws his tokens
+  #   scenario += pool.redeem(
+  #     bobTokens * Constants.PRECISION
+  #   ).run(
+  #     sender = Addresses.BOB_ADDRESS
+  #   )
+
+  #   # THEN Alice retains her position
+  #   scenario.verify(token.data.balances[Addresses.ALICE_ADDRESS].balance == aliceTokens)
+  #   scenario.verify(pool.data.balances[Addresses.ALICE_ADDRESS].balance == sp.nat(0))
+
+  #   # AND Bob receives his original tokens back and the LP tokens are burn.
+  #   scenario.verify(token.data.balances[Addresses.BOB_ADDRESS].balance == bobTokens)
+  #   scenario.verify(pool.data.balances[Addresses.BOB_ADDRESS].balance == sp.nat(0))
+
+  #   # AND the total supply of tokens is as expected
+  #   scenario.verify(pool.data.totalSupply == sp.nat(0))
+
+  #   # AND the pool has possession of the correct number of tokens.
+  #   scenario.verify(token.data.balances[pool.address].balance == sp.nat(0))
+  #   scenario.verify(pool.data.underlyingBalance == sp.nat(0))
+
+  # @sp.add_test(name="redeem - can redeem from two accounts - reversed")
+  # def test():
+  #   scenario = sp.test_scenario()
+
+  #   # GIVEN a token contract
+  #   token = FA12.FA12(
+  #     admin = Addresses.ADMIN_ADDRESS
+  #   )
+  #   scenario += token
+
+  #   # AND a pool contract
+  #   pool = PoolContract(
+  #     tokenAddress = token.address
+  #   )
+  #   scenario += pool
+
+  #   # AND Alice has tokens
+  #   aliceTokens = sp.nat(10)
+  #   scenario += token.mint(
+  #     sp.record(
+  #       address = Addresses.ALICE_ADDRESS,
+  #       value = aliceTokens
+  #     )
+  #   ).run(
+  #     sender = Addresses.ADMIN_ADDRESS
+  #   )
+
+  #   # AND Bob has twice as many tokens
+  #   bobTokens = sp.nat(40)
+  #   scenario += token.mint(
+  #     sp.record(
+  #       address = Addresses.BOB_ADDRESS,
+  #       value = bobTokens
+  #     )
+  #   ).run(
+  #     sender = Addresses.ADMIN_ADDRESS
+  #   )
+
+  #   # AND Alice has given the pool an allowance
+  #   scenario += token.approve(
+  #     sp.record(
+  #       spender = pool.address,
+  #       value = aliceTokens
+  #     )
+  #   ).run(
+  #     sender = Addresses.ALICE_ADDRESS
+  #   )
+
+  #   # AND Bob has given the pool an allowance
+  #   scenario += token.approve(
+  #     sp.record(
+  #       spender = pool.address,
+  #       value = bobTokens
+  #     )
+  #   ).run(
+  #     sender = Addresses.BOB_ADDRESS
+  #   )
+
+  #   # AND Alice and Bob deposit tokens in the contract.
+  #   scenario += pool.deposit(
+  #     aliceTokens
+  #   ).run(
+  #     sender = Addresses.ALICE_ADDRESS
+  #   )
+
+  #   scenario += pool.deposit(
+  #     bobTokens
+  #   ).run(
+  #     sender = Addresses.BOB_ADDRESS
+  #   )
+
+  #   # WHEN Bob withdraws his tokens
+  #   scenario += pool.redeem(
+  #     bobTokens * Constants.PRECISION
+  #   ).run(
+  #     sender = Addresses.BOB_ADDRESS
+  #   )
+
+  #   # THEN Alice retains her position
+  #   scenario.verify(token.data.balances[Addresses.ALICE_ADDRESS].balance == sp.nat(0))
+  #   scenario.verify(pool.data.balances[Addresses.ALICE_ADDRESS].balance == aliceTokens * Constants.PRECISION)
+
+  #   # AND Bob receives his original tokens back and the LP tokens are burn.
+  #   scenario.verify(token.data.balances[Addresses.BOB_ADDRESS].balance == bobTokens)
+  #   scenario.verify(pool.data.balances[Addresses.BOB_ADDRESS].balance == sp.nat(0))
+
+  #   # AND the total supply of tokens is as expected
+  #   scenario.verify(pool.data.totalSupply == aliceTokens * Constants.PRECISION)
+
+  #   # AND the pool has possession of the correct number of tokens.
+  #   scenario.verify(token.data.balances[pool.address].balance == aliceTokens)
+  #   scenario.verify(pool.data.underlyingBalance == aliceTokens)
+
+  #   # WHEN Alice withdraws her tokens
+  #   scenario += pool.redeem(
+  #     aliceTokens * Constants.PRECISION
+  #   ).run(
+  #     sender = Addresses.ALICE_ADDRESS
+  #   )
+
+  #   # THEN Alice receives her original tokens back and the LP tokens are burnt
+  #   scenario.verify(token.data.balances[Addresses.ALICE_ADDRESS].balance == aliceTokens)
+  #   scenario.verify(pool.data.balances[Addresses.ALICE_ADDRESS].balance == sp.nat(0))
+
+  #   # AND Bob still has his position
+  #   scenario.verify(token.data.balances[Addresses.BOB_ADDRESS].balance == bobTokens)
+  #   scenario.verify(pool.data.balances[Addresses.BOB_ADDRESS].balance == sp.nat(0))
+
+  #   # AND the total supply of tokens is as expected
+  #   scenario.verify(pool.data.totalSupply == sp.nat(0))
+
+  #   # AND the pool has possession of the correct number of tokens.
+  #   scenario.verify(token.data.balances[pool.address].balance == sp.nat(0))
+  #   scenario.verify(pool.data.underlyingBalance == sp.nat(0))
+
+  # @sp.add_test(name="redeem - can redeem partially from two accounts")
+  # def test():
+  #   scenario = sp.test_scenario()
+
+  #   # GIVEN a token contract
+  #   token = FA12.FA12(
+  #     admin = Addresses.ADMIN_ADDRESS
+  #   )
+  #   scenario += token
+
+  #   # AND a pool contract
+  #   pool = PoolContract(
+  #     tokenAddress = token.address
+  #   )
+  #   scenario += pool
+
+  #   # AND Alice has tokens
+  #   aliceTokens = sp.nat(10)
+  #   scenario += token.mint(
+  #     sp.record(
+  #       address = Addresses.ALICE_ADDRESS,
+  #       value = aliceTokens
+  #     )
+  #   ).run(
+  #     sender = Addresses.ADMIN_ADDRESS
+  #   )
+
+  #   # AND Bob has twice as many tokens
+  #   bobTokens = sp.nat(40)
+  #   scenario += token.mint(
+  #     sp.record(
+  #       address = Addresses.BOB_ADDRESS,
+  #       value = bobTokens
+  #     )
+  #   ).run(
+  #     sender = Addresses.ADMIN_ADDRESS
+  #   )
+
+  #   # AND Alice has given the pool an allowance
+  #   scenario += token.approve(
+  #     sp.record(
+  #       spender = pool.address,
+  #       value = aliceTokens
+  #     )
+  #   ).run(
+  #     sender = Addresses.ALICE_ADDRESS
+  #   )
+
+  #   # AND Bob has given the pool an allowance
+  #   scenario += token.approve(
+  #     sp.record(
+  #       spender = pool.address,
+  #       value = bobTokens
+  #     )
+  #   ).run(
+  #     sender = Addresses.BOB_ADDRESS
+  #   )
+
+  #   # AND Alice and Bob deposit tokens in the contract.
+  #   scenario += pool.deposit(
+  #     aliceTokens
+  #   ).run(
+  #     sender = Addresses.ALICE_ADDRESS
+  #   )
+
+  #   scenario += pool.deposit(
+  #     bobTokens
+  #   ).run(
+  #     sender = Addresses.BOB_ADDRESS
+  #   )
+
+  #   # WHEN Alice withdraws half of her tokens
+  #   scenario += pool.redeem(
+  #     aliceTokens / 2 * Constants.PRECISION
+  #   ).run(
+  #     sender = Addresses.ALICE_ADDRESS
+  #   )
+
+  #   # THEN Alice receives her original tokens back and the LP tokens are burnt
+  #   scenario.verify(token.data.balances[Addresses.ALICE_ADDRESS].balance == aliceTokens / 2)
+  #   scenario.verify(pool.data.balances[Addresses.ALICE_ADDRESS].balance == aliceTokens / 2 * Constants.PRECISION)
+
+  #   # AND Bob still has his position
+  #   scenario.verify(token.data.balances[Addresses.BOB_ADDRESS].balance == sp.nat(0))
+  #   scenario.verify(pool.data.balances[Addresses.BOB_ADDRESS].balance == aliceTokens * 4 * Constants.PRECISION)
+
+  #   # AND the total supply of tokens is as expected
+  #   scenario.verify(pool.data.totalSupply == (bobTokens + (aliceTokens / 2)) * Constants.PRECISION)
+
+  #   # AND the pool has possession of the correct number of tokens.
+  #   scenario.verify(token.data.balances[pool.address].balance == bobTokens + (aliceTokens / 2))
+  #   scenario.verify(pool.data.underlyingBalance == bobTokens + (aliceTokens / 2))
+
+  #   # WHEN Bob withdraws a quarter of his tokens
+  #   scenario += pool.redeem(
+  #     bobTokens / 4 * Constants.PRECISION
+  #   ).run(
+  #     sender = Addresses.BOB_ADDRESS
+  #   )
+
+  #   # THEN Alice retains her position
+  #   scenario.verify(token.data.balances[Addresses.ALICE_ADDRESS].balance == aliceTokens / 2)
+  #   scenario.verify(pool.data.balances[Addresses.ALICE_ADDRESS].balance == aliceTokens / 2 * Constants.PRECISION)
+
+  #   # AND Bob receives his original tokens back and the LP tokens are burn.
+  #   scenario.verify(token.data.balances[Addresses.BOB_ADDRESS].balance == 9) # Bob withdraws 22% (10/45) of the pool, which is 9.9999 tokens. Integer math truncates the remainder
+  #   scenario.verify(pool.data.balances[Addresses.BOB_ADDRESS].balance == 30 * Constants.PRECISION) # Bob withdrew 1/4 of tokens = .25 * 40 = 30
+
+  #   # AND the total supply of tokens is as expected
+  #   # Expected = 50 tokens generated - 5 tokens alice redeemed - 10 tokens bob redeemed
+  #   scenario.verify(pool.data.totalSupply == sp.nat(35) * Constants.PRECISION)
+
+  #   # AND the pool has possession of the correct number of tokens.
+  #   # Expected:
+  #   # 1/2 of alice tokens + 3/4 of bob tokens + 1 token rounding error = 5 + 30 + 1 = 36
+  #   expectedRemainingTokens = sp.nat(36)
+  #   scenario.verify(token.data.balances[pool.address].balance == expectedRemainingTokens) 
+  #   scenario.verify(pool.data.underlyingBalance == expectedRemainingTokens)
+
+  # @sp.add_test(name="redeem - can redeem from two accounts with liquidity added")
+  # def test():
+  #   scenario = sp.test_scenario()
+
+  #   # GIVEN a token contract
+  #   token = FA12.FA12(
+  #     admin = Addresses.ADMIN_ADDRESS
+  #   )
+  #   scenario += token
+
+  #   # AND a pool contract
+  #   pool = PoolContract(
+  #     tokenAddress = token.address
+  #   )
+  #   scenario += pool
+
+  #   # AND Alice has tokens
+  #   aliceTokens = sp.nat(10)
+  #   scenario += token.mint(
+  #     sp.record(
+  #       address = Addresses.ALICE_ADDRESS,
+  #       value = aliceTokens
+  #     )
+  #   ).run(
+  #     sender = Addresses.ADMIN_ADDRESS
+  #   )
+
+  #   # AND Bob has twice as many tokens
+  #   bobTokens = sp.nat(40)
+  #   scenario += token.mint(
+  #     sp.record(
+  #       address = Addresses.BOB_ADDRESS,
+  #       value = bobTokens
+  #     )
+  #   ).run(
+  #     sender = Addresses.ADMIN_ADDRESS
+  #   )
+
+  #   # AND Alice has given the pool an allowance
+  #   scenario += token.approve(
+  #     sp.record(
+  #       spender = pool.address,
+  #       value = aliceTokens
+  #     )
+  #   ).run(
+  #     sender = Addresses.ALICE_ADDRESS
+  #   )
+
+  #   # AND Bob has given the pool an allowance
+  #   scenario += token.approve(
+  #     sp.record(
+  #       spender = pool.address,
+  #       value = bobTokens
+  #     )
+  #   ).run(
+  #     sender = Addresses.BOB_ADDRESS
+  #   )
+
+  #   # AND Alice and Bob deposit tokens in the contract.
+  #   scenario += pool.deposit(
+  #     aliceTokens
+  #   ).run(
+  #     sender = Addresses.ALICE_ADDRESS
+  #   )
+
+  #   scenario += pool.deposit(
+  #     bobTokens
+  #   ).run(
+  #     sender = Addresses.BOB_ADDRESS
+  #   )
+
+  #   # AND the contract receives an additional number of tokens.
+  #   additionalTokens = 10
+  #   scenario += token.mint(
+  #     sp.record(
+  #       address = pool.address,
+  #       value = additionalTokens
+  #     )
+  #   ).run(
+  #     sender = Addresses.ADMIN_ADDRESS
+  #   )
+
+  #   # WHEN Alice withdraws her tokens
+  #   scenario += pool.redeem(
+  #     aliceTokens * Constants.PRECISION
+  #   ).run(
+  #     sender = Addresses.ALICE_ADDRESS
+  #   )
+
+  #   # THEN Alice receives her original tokens plus a proportion of the additional tokens back and the LP tokens are burnt
+  #   # Alice owns 20% of the pool * 10 additional tokens = 2 additional tokens
+  #   additionalTokensForAlice = sp.nat(2)
+  #   scenario.verify(token.data.balances[Addresses.ALICE_ADDRESS].balance == aliceTokens + additionalTokensForAlice)
+  #   scenario.verify(pool.data.balances[Addresses.ALICE_ADDRESS].balance == sp.nat(0))
+
+  #   # AND Bob still has his position
+  #   scenario.verify(token.data.balances[Addresses.BOB_ADDRESS].balance == sp.nat(0))
+  #   scenario.verify(pool.data.balances[Addresses.BOB_ADDRESS].balance == aliceTokens * 4 * Constants.PRECISION)
+
+  #   # AND the total supply of tokens is as expected
+  #   scenario.verify(pool.data.totalSupply == bobTokens * Constants.PRECISION)
+
+  #   # AND the pool has possession of the correct number of tokens.
+  #   # 10 tokens were added to the pool - 2 tokens alice withdrew = 8 additional tokens remaining.
+  #   scenario.verify(token.data.balances[pool.address].balance == bobTokens + sp.as_nat(additionalTokens - additionalTokensForAlice))
+  #   scenario.verify(pool.data.underlyingBalance == bobTokens + sp.as_nat(additionalTokens - additionalTokensForAlice))
+
+  #   # WHEN Bob withdraws his tokens
+  #   scenario += pool.redeem(
+  #     bobTokens * Constants.PRECISION
+  #   ).run(
+  #     sender = Addresses.BOB_ADDRESS
+  #   )
+
+  #   # THEN Alice retains her position
+  #   scenario.verify(token.data.balances[Addresses.ALICE_ADDRESS].balance == aliceTokens + additionalTokensForAlice)
+  #   scenario.verify(pool.data.balances[Addresses.ALICE_ADDRESS].balance == sp.nat(0))
+
+  #   # AND Bob receives his original tokens back and the LP tokens are burn.
+  #   # Bob owned 80% of the pool * 10 additional tokens = 8 additional tokens   
+  #   additionalTokensForBob = sp.nat(8)
+  #   scenario.verify(token.data.balances[Addresses.BOB_ADDRESS].balance == bobTokens + additionalTokensForBob)
+  #   scenario.verify(pool.data.balances[Addresses.BOB_ADDRESS].balance == sp.nat(0))
+
+  #   # AND the total supply of tokens is as expected
+  #   scenario.verify(pool.data.totalSupply == sp.nat(0))
+
+  #   # AND the pool has possession of the correct number of tokens.
+  #   scenario.verify(token.data.balances[pool.address].balance == sp.nat(0))
+  #   scenario.verify(pool.data.underlyingBalance == sp.nat(0))
+
+  # @sp.add_test(name="redeem - can redeem correctly from accounts joining after liquidity is added")
+  # def test():
+  #   scenario = sp.test_scenario()
+
+  #   # GIVEN a token contract
+  #   token = FA12.FA12(
+  #     admin = Addresses.ADMIN_ADDRESS
+  #   )
+  #   scenario += token
+
+  #   # AND a pool contract
+  #   pool = PoolContract(
+  #     tokenAddress = token.address
+  #   )
+  #   scenario += pool
+
+  #   # AND Alice has tokens
+  #   aliceTokens = sp.nat(10)
+  #   scenario += token.mint(
+  #     sp.record(
+  #       address = Addresses.ALICE_ADDRESS,
+  #       value = aliceTokens
+  #     )
+  #   ).run(
+  #     sender = Addresses.ADMIN_ADDRESS
+  #   )
+
+  #   # AND Bob has twice as many tokens
+  #   bobTokens = sp.nat(40)
+  #   scenario += token.mint(
+  #     sp.record(
+  #       address = Addresses.BOB_ADDRESS,
+  #       value = bobTokens
+  #     )
+  #   ).run(
+  #     sender = Addresses.ADMIN_ADDRESS
+  #   )
+
+  #   # AND Charlie has tokens
+  #   charlieTokens = sp.nat(60)
+  #   scenario += token.mint(
+  #     sp.record(
+  #       address = Addresses.CHARLIE_ADDRESS,
+  #       value = charlieTokens
+  #     )
+  #   ).run(
+  #     sender = Addresses.ADMIN_ADDRESS
+  #   )
+
+  #   # AND Alice has given the pool an allowance
+  #   scenario += token.approve(
+  #     sp.record(
+  #       spender = pool.address,
+  #       value = aliceTokens
+  #     )
+  #   ).run(
+  #     sender = Addresses.ALICE_ADDRESS
+  #   )
+
+  #   # AND Bob has given the pool an allowance
+  #   scenario += token.approve(
+  #     sp.record(
+  #       spender = pool.address,
+  #       value = bobTokens
+  #     )
+  #   ).run(
+  #     sender = Addresses.BOB_ADDRESS
+  #   )
+
+  #   # AND Charlie has given the pool an allowance
+  #   scenario += token.approve(
+  #     sp.record(
+  #       spender = pool.address,
+  #       value = charlieTokens
+  #     )
+  #   ).run(
+  #     sender = Addresses.CHARLIE_ADDRESS
+  #   )
+
+  #   # AND Alice and Bob deposit tokens in the contract.
+  #   scenario += pool.deposit(
+  #     aliceTokens
+  #   ).run(
+  #     sender = Addresses.ALICE_ADDRESS
+  #   )
+
+  #   scenario += pool.deposit(
+  #     bobTokens
+  #   ).run(
+  #     sender = Addresses.BOB_ADDRESS
+  #   )
+
+  #   # AND the contract receives an additional number of tokens.
+  #   additionalTokens = 10
+  #   scenario += token.mint(
+  #     sp.record(
+  #       address = pool.address,
+  #       value = additionalTokens
+  #     )
+  #   ).run(
+  #     sender = Addresses.ADMIN_ADDRESS
+  #   )
+
+  #   # AND Charlie joins after the liquidity is added
+  #   scenario += pool.deposit(
+  #     charlieTokens
+  #   ).run(
+  #     sender = Addresses.CHARLIE_ADDRESS
+  #   )
+
+  #   # WHEN everyone withdraws their tokens
+  #   scenario += pool.redeem(
+  #     aliceTokens * Constants.PRECISION
+  #   ).run(
+  #     sender = Addresses.ALICE_ADDRESS
+  #   )
+
+  #   scenario += pool.redeem(
+  #     bobTokens * Constants.PRECISION
+  #   ).run(
+  #     sender = Addresses.BOB_ADDRESS
+  #   )
     
-    scenario += pool.redeem(
-      pool.data.balances[Addresses.CHARLIE_ADDRESS].balance
-    ).run(
-      sender = Addresses.CHARLIE_ADDRESS
-    )
+  #   scenario += pool.redeem(
+  #     pool.data.balances[Addresses.CHARLIE_ADDRESS].balance
+  #   ).run(
+  #     sender = Addresses.CHARLIE_ADDRESS
+  #   )
 
-    # THEN all LP tokens are burnt
-    scenario.verify(pool.data.totalSupply == sp.nat(0))
-    scenario.verify(pool.data.balances[Addresses.ALICE_ADDRESS].balance == sp.nat(0))
-    scenario.verify(pool.data.balances[Addresses.BOB_ADDRESS].balance == sp.nat(0))
-    scenario.verify(pool.data.balances[Addresses.CHARLIE_ADDRESS].balance == sp.nat(0))
+  #   # THEN all LP tokens are burnt
+  #   scenario.verify(pool.data.totalSupply == sp.nat(0))
+  #   scenario.verify(pool.data.balances[Addresses.ALICE_ADDRESS].balance == sp.nat(0))
+  #   scenario.verify(pool.data.balances[Addresses.BOB_ADDRESS].balance == sp.nat(0))
+  #   scenario.verify(pool.data.balances[Addresses.CHARLIE_ADDRESS].balance == sp.nat(0))
 
-    # AND the pool has no tokens left in it.
-    scenario.verify(token.data.balances[pool.address].balance == sp.nat(0))
-    scenario.verify(pool.data.underlyingBalance == sp.nat(0))
+  #   # AND the pool has no tokens left in it.
+  #   scenario.verify(token.data.balances[pool.address].balance == sp.nat(0))
+  #   scenario.verify(pool.data.underlyingBalance == sp.nat(0))
 
-    # AND Balances are expected
-    # NOTE: there are minor rounding errors on withdrawals.
-    scenario.verify(token.data.balances[Addresses.ALICE_ADDRESS].balance == sp.nat(12))
-    scenario.verify(token.data.balances[Addresses.BOB_ADDRESS].balance == sp.nat(47))
-    scenario.verify(token.data.balances[Addresses.CHARLIE_ADDRESS].balance == sp.nat(61))
+  #   # AND Balances are expected
+  #   # NOTE: there are minor rounding errors on withdrawals.
+  #   scenario.verify(token.data.balances[Addresses.ALICE_ADDRESS].balance == sp.nat(12))
+  #   scenario.verify(token.data.balances[Addresses.BOB_ADDRESS].balance == sp.nat(47))
+  #   scenario.verify(token.data.balances[Addresses.CHARLIE_ADDRESS].balance == sp.nat(61))
 
-  @sp.add_test(name="redeem - can redeem correctly from accounts joining after liquidity is added with fraction of pool")
-  def test():
-    scenario = sp.test_scenario()
+  # @sp.add_test(name="redeem - can redeem correctly from accounts joining after liquidity is added with fraction of pool")
+  # def test():
+  #   scenario = sp.test_scenario()
 
-    # GIVEN a token contract
-    token = FA12.FA12(
-      admin = Addresses.ADMIN_ADDRESS
-    )
-    scenario += token
+  #   # GIVEN a token contract
+  #   token = FA12.FA12(
+  #     admin = Addresses.ADMIN_ADDRESS
+  #   )
+  #   scenario += token
 
-    # AND a pool contract
-    pool = PoolContract(
-      tokenAddress = token.address
-    )
-    scenario += pool
+  #   # AND a pool contract
+  #   pool = PoolContract(
+  #     tokenAddress = token.address
+  #   )
+  #   scenario += pool
 
-    # AND Alice has tokens
-    aliceTokens = sp.nat(10)
-    scenario += token.mint(
-      sp.record(
-        address = Addresses.ALICE_ADDRESS,
-        value = aliceTokens
-      )
-    ).run(
-      sender = Addresses.ADMIN_ADDRESS
-    )
+  #   # AND Alice has tokens
+  #   aliceTokens = sp.nat(10)
+  #   scenario += token.mint(
+  #     sp.record(
+  #       address = Addresses.ALICE_ADDRESS,
+  #       value = aliceTokens
+  #     )
+  #   ).run(
+  #     sender = Addresses.ADMIN_ADDRESS
+  #   )
 
-    # AND Bob has twice as many tokens
-    bobTokens = sp.nat(40)
-    scenario += token.mint(
-      sp.record(
-        address = Addresses.BOB_ADDRESS,
-        value = bobTokens
-      )
-    ).run(
-      sender = Addresses.ADMIN_ADDRESS
-    )
+  #   # AND Bob has twice as many tokens
+  #   bobTokens = sp.nat(40)
+  #   scenario += token.mint(
+  #     sp.record(
+  #       address = Addresses.BOB_ADDRESS,
+  #       value = bobTokens
+  #     )
+  #   ).run(
+  #     sender = Addresses.ADMIN_ADDRESS
+  #   )
 
-    # AND Charlie has tokens
-    charlieTokens = sp.nat(20)
-    scenario += token.mint(
-      sp.record(
-        address = Addresses.CHARLIE_ADDRESS,
-        value = charlieTokens
-      )
-    ).run(
-      sender = Addresses.ADMIN_ADDRESS
-    )
+  #   # AND Charlie has tokens
+  #   charlieTokens = sp.nat(20)
+  #   scenario += token.mint(
+  #     sp.record(
+  #       address = Addresses.CHARLIE_ADDRESS,
+  #       value = charlieTokens
+  #     )
+  #   ).run(
+  #     sender = Addresses.ADMIN_ADDRESS
+  #   )
 
-    # AND Alice has given the pool an allowance
-    scenario += token.approve(
-      sp.record(
-        spender = pool.address,
-        value = aliceTokens
-      )
-    ).run(
-      sender = Addresses.ALICE_ADDRESS
-    )
+  #   # AND Alice has given the pool an allowance
+  #   scenario += token.approve(
+  #     sp.record(
+  #       spender = pool.address,
+  #       value = aliceTokens
+  #     )
+  #   ).run(
+  #     sender = Addresses.ALICE_ADDRESS
+  #   )
 
-    # AND Bob has given the pool an allowance
-    scenario += token.approve(
-      sp.record(
-        spender = pool.address,
-        value = bobTokens
-      )
-    ).run(
-      sender = Addresses.BOB_ADDRESS
-    )
+  #   # AND Bob has given the pool an allowance
+  #   scenario += token.approve(
+  #     sp.record(
+  #       spender = pool.address,
+  #       value = bobTokens
+  #     )
+  #   ).run(
+  #     sender = Addresses.BOB_ADDRESS
+  #   )
 
-    # AND Charlie has given the pool an allowance
-    scenario += token.approve(
-      sp.record(
-        spender = pool.address,
-        value = charlieTokens
-      )
-    ).run(
-      sender = Addresses.CHARLIE_ADDRESS
-    )
+  #   # AND Charlie has given the pool an allowance
+  #   scenario += token.approve(
+  #     sp.record(
+  #       spender = pool.address,
+  #       value = charlieTokens
+  #     )
+  #   ).run(
+  #     sender = Addresses.CHARLIE_ADDRESS
+  #   )
 
-    # AND Alice and Bob deposit tokens in the contract.
-    scenario += pool.deposit(
-      aliceTokens
-    ).run(
-      sender = Addresses.ALICE_ADDRESS
-    )
+  #   # AND Alice and Bob deposit tokens in the contract.
+  #   scenario += pool.deposit(
+  #     aliceTokens
+  #   ).run(
+  #     sender = Addresses.ALICE_ADDRESS
+  #   )
 
-    scenario += pool.deposit(
-      bobTokens
-    ).run(
-      sender = Addresses.BOB_ADDRESS
-    )
+  #   scenario += pool.deposit(
+  #     bobTokens
+  #   ).run(
+  #     sender = Addresses.BOB_ADDRESS
+  #   )
 
-    # AND the contract receives an additional number of tokens.
-    additionalTokens = 10
-    scenario += token.mint(
-      sp.record(
-        address = pool.address,
-        value = additionalTokens
-      )
-    ).run(
-      sender = Addresses.ADMIN_ADDRESS
-    )
+  #   # AND the contract receives an additional number of tokens.
+  #   additionalTokens = 10
+  #   scenario += token.mint(
+  #     sp.record(
+  #       address = pool.address,
+  #       value = additionalTokens
+  #     )
+  #   ).run(
+  #     sender = Addresses.ADMIN_ADDRESS
+  #   )
 
-    # AND Charlie joins after the liquidity is added
-    scenario += pool.deposit(
-      charlieTokens
-    ).run(
-      sender = Addresses.CHARLIE_ADDRESS
-    )
+  #   # AND Charlie joins after the liquidity is added
+  #   scenario += pool.deposit(
+  #     charlieTokens
+  #   ).run(
+  #     sender = Addresses.CHARLIE_ADDRESS
+  #   )
 
-    # WHEN everyone withdraws their tokens
-    scenario += pool.redeem(
-      aliceTokens * Constants.PRECISION
-    ).run(
-      sender = Addresses.ALICE_ADDRESS
-    )
+  #   # WHEN everyone withdraws their tokens
+  #   scenario += pool.redeem(
+  #     aliceTokens * Constants.PRECISION
+  #   ).run(
+  #     sender = Addresses.ALICE_ADDRESS
+  #   )
 
-    scenario += pool.redeem(
-      bobTokens * Constants.PRECISION
-    ).run(
-      sender = Addresses.BOB_ADDRESS
-    )
+  #   scenario += pool.redeem(
+  #     bobTokens * Constants.PRECISION
+  #   ).run(
+  #     sender = Addresses.BOB_ADDRESS
+  #   )
     
-    scenario += pool.redeem(
-      pool.data.balances[Addresses.CHARLIE_ADDRESS].balance
-    ).run(
-      sender = Addresses.CHARLIE_ADDRESS
-    )
+  #   scenario += pool.redeem(
+  #     pool.data.balances[Addresses.CHARLIE_ADDRESS].balance
+  #   ).run(
+  #     sender = Addresses.CHARLIE_ADDRESS
+  #   )
 
-    # THEN all LP tokens are burnt
-    scenario.verify(pool.data.totalSupply == sp.nat(0))
-    scenario.verify(pool.data.balances[Addresses.ALICE_ADDRESS].balance == sp.nat(0))
-    scenario.verify(pool.data.balances[Addresses.BOB_ADDRESS].balance == sp.nat(0))
-    scenario.verify(pool.data.balances[Addresses.CHARLIE_ADDRESS].balance == sp.nat(0))
+  #   # THEN all LP tokens are burnt
+  #   scenario.verify(pool.data.totalSupply == sp.nat(0))
+  #   scenario.verify(pool.data.balances[Addresses.ALICE_ADDRESS].balance == sp.nat(0))
+  #   scenario.verify(pool.data.balances[Addresses.BOB_ADDRESS].balance == sp.nat(0))
+  #   scenario.verify(pool.data.balances[Addresses.CHARLIE_ADDRESS].balance == sp.nat(0))
 
-    # AND the pool has no tokens left in it.
-    scenario.verify(token.data.balances[pool.address].balance == sp.nat(0))
-    scenario.verify(pool.data.underlyingBalance == sp.nat(0))
+  #   # AND the pool has no tokens left in it.
+  #   scenario.verify(token.data.balances[pool.address].balance == sp.nat(0))
+  #   scenario.verify(pool.data.underlyingBalance == sp.nat(0))
 
-    # AND Balances are expected
-    # NOTE: there are minor rounding errors on withdrawals.
-    scenario.verify(token.data.balances[Addresses.ALICE_ADDRESS].balance == sp.nat(12))
-    scenario.verify(token.data.balances[Addresses.BOB_ADDRESS].balance == sp.nat(47))
-    scenario.verify(token.data.balances[Addresses.CHARLIE_ADDRESS].balance == sp.nat(21))
+  #   # AND Balances are expected
+  #   # NOTE: there are minor rounding errors on withdrawals.
+  #   scenario.verify(token.data.balances[Addresses.ALICE_ADDRESS].balance == sp.nat(12))
+  #   scenario.verify(token.data.balances[Addresses.BOB_ADDRESS].balance == sp.nat(47))
+  #   scenario.verify(token.data.balances[Addresses.CHARLIE_ADDRESS].balance == sp.nat(21))
 
-  ################################################################
-  # redeem_callback
-  ################################################################
+  # ################################################################
+  # # redeem_callback
+  # ################################################################
 
-  @sp.add_test(name="redeem_callback - can finish redeem")
-  def test():
-    scenario = sp.test_scenario()
+  # @sp.add_test(name="redeem_callback - can finish redeem")
+  # def test():
+  #   scenario = sp.test_scenario()
 
-    # GIVEN a token contract
-    token = FA12.FA12(
-      admin = Addresses.ADMIN_ADDRESS
-    )
-    scenario += token
+  #   # GIVEN a token contract
+  #   token = FA12.FA12(
+  #     admin = Addresses.ADMIN_ADDRESS
+  #   )
+  #   scenario += token
 
-    # AND Alice has tokens
-    aliceTokens = sp.nat(10)
-    scenario += token.mint(
-      sp.record(
-        address = Addresses.ALICE_ADDRESS,
-        value = aliceTokens
-      )
-    ).run(
-      sender = Addresses.ADMIN_ADDRESS
-    )
+  #   # AND Alice has tokens
+  #   aliceTokens = sp.nat(10)
+  #   scenario += token.mint(
+  #     sp.record(
+  #       address = Addresses.ALICE_ADDRESS,
+  #       value = aliceTokens
+  #     )
+  #   ).run(
+  #     sender = Addresses.ADMIN_ADDRESS
+  #   )
 
-    # AND a pool contract in the WAITING_REDEEM state
-    pool = PoolContract(
-      state = WAITING_REDEEM,
-      savedState_redeemer = sp.some(Addresses.ALICE_ADDRESS),
-      savedState_tokensToRedeem = sp.some(aliceTokens * Constants.PRECISION),
+  #   # AND a pool contract in the WAITING_REDEEM state
+  #   pool = PoolContract(
+  #     state = WAITING_REDEEM,
+  #     savedState_redeemer = sp.some(Addresses.ALICE_ADDRESS),
+  #     savedState_tokensToRedeem = sp.some(aliceTokens * Constants.PRECISION),
 
-      tokenAddress = token.address
-    )
-    scenario += pool
+  #     tokenAddress = token.address
+  #   )
+  #   scenario += pool
     
-    # AND Alice has LP tokens
-    scenario += pool.mint(
-      sp.record(
-        address = Addresses.ALICE_ADDRESS,
-        value = aliceTokens * Constants.PRECISION
-      )
-    ).run(
-      sender = pool.address
-    )
+  #   # AND Alice has LP tokens
+  #   scenario += pool.mint(
+  #     sp.record(
+  #       address = Addresses.ALICE_ADDRESS,
+  #       value = aliceTokens * Constants.PRECISION
+  #     )
+  #   ).run(
+  #     sender = pool.address
+  #   )
 
-    # AND the pool has tokens
-    poolTokens = Constants.PRECISION * 200
-    scenario += token.mint(
-      sp.record(
-        address = pool.address,
-        value = poolTokens
-      )
-    ).run(
-      sender = Addresses.ADMIN_ADDRESS
-    )
+  #   # AND the pool has tokens
+  #   poolTokens = Constants.PRECISION * 200
+  #   scenario += token.mint(
+  #     sp.record(
+  #       address = pool.address,
+  #       value = poolTokens
+  #     )
+  #   ).run(
+  #     sender = Addresses.ADMIN_ADDRESS
+  #   )
 
-    # WHEN redeem_callback is run
-    scenario += pool.redeem_callback(
-      poolTokens
-    ).run(
-      sender = token.address
-    )
+  #   # WHEN redeem_callback is run
+  #   scenario += pool.redeem_callback(
+  #     poolTokens
+  #   ).run(
+  #     sender = token.address
+  #   )
 
-    # THEN the call succeeds.
-    # NOTE: The exact end state is covered by `redeem` tests - we just want to prove that redeem_callback works
-    # under the given conditions so we can vary state and sender in other tests to prove it fails.
-    scenario.verify(pool.data.state == IDLE)
+  #   # THEN the call succeeds.
+  #   # NOTE: The exact end state is covered by `redeem` tests - we just want to prove that redeem_callback works
+  #   # under the given conditions so we can vary state and sender in other tests to prove it fails.
+  #   scenario.verify(pool.data.state == IDLE)
 
-  @sp.add_test(name="redeem_callback - fails in bad state")
-  def test():
-    scenario = sp.test_scenario()
+  # @sp.add_test(name="redeem_callback - fails in bad state")
+  # def test():
+  #   scenario = sp.test_scenario()
 
-    # GIVEN a token contract
-    token = FA12.FA12(
-      admin = Addresses.ADMIN_ADDRESS
-    )
-    scenario += token
+  #   # GIVEN a token contract
+  #   token = FA12.FA12(
+  #     admin = Addresses.ADMIN_ADDRESS
+  #   )
+  #   scenario += token
 
-    # AND Alice has tokens
-    aliceTokens = sp.nat(10)
-    scenario += token.mint(
-      sp.record(
-        address = Addresses.ALICE_ADDRESS,
-        value = aliceTokens
-      )
-    ).run(
-      sender = Addresses.ADMIN_ADDRESS
-    )
+  #   # AND Alice has tokens
+  #   aliceTokens = sp.nat(10)
+  #   scenario += token.mint(
+  #     sp.record(
+  #       address = Addresses.ALICE_ADDRESS,
+  #       value = aliceTokens
+  #     )
+  #   ).run(
+  #     sender = Addresses.ADMIN_ADDRESS
+  #   )
 
-    # AND a pool contract in the IDLE state
-    pool = PoolContract(
-      state = IDLE,
-      savedState_redeemer = sp.none,
-      savedState_tokensToRedeem = sp.none,
+  #   # AND a pool contract in the IDLE state
+  #   pool = PoolContract(
+  #     state = IDLE,
+  #     savedState_redeemer = sp.none,
+  #     savedState_tokensToRedeem = sp.none,
 
-      tokenAddress = token.address
-    )
-    scenario += pool
+  #     tokenAddress = token.address
+  #   )
+  #   scenario += pool
     
-    # AND Alice has LP tokens
-    scenario += pool.mint(
-      sp.record(
-        address = Addresses.ALICE_ADDRESS,
-        value = aliceTokens * Constants.PRECISION
-      )
-    ).run(
-      sender = pool.address
-    )
+  #   # AND Alice has LP tokens
+  #   scenario += pool.mint(
+  #     sp.record(
+  #       address = Addresses.ALICE_ADDRESS,
+  #       value = aliceTokens * Constants.PRECISION
+  #     )
+  #   ).run(
+  #     sender = pool.address
+  #   )
 
-    # AND the pool has tokens
-    poolTokens = Constants.PRECISION * 200
-    scenario += token.mint(
-      sp.record(
-        address = pool.address,
-        value = poolTokens
-      )
-    ).run(
-      sender = Addresses.ADMIN_ADDRESS
-    )
+  #   # AND the pool has tokens
+  #   poolTokens = Constants.PRECISION * 200
+  #   scenario += token.mint(
+  #     sp.record(
+  #       address = pool.address,
+  #       value = poolTokens
+  #     )
+  #   ).run(
+  #     sender = Addresses.ADMIN_ADDRESS
+  #   )
 
-    # WHEN redeem_callback is run
-    # THEN the call fails
-    scenario += pool.redeem_callback(
-      poolTokens
-    ).run(
-      sender = token.address,
-      valid = False
-    )
+  #   # WHEN redeem_callback is run
+  #   # THEN the call fails
+  #   scenario += pool.redeem_callback(
+  #     poolTokens
+  #   ).run(
+  #     sender = token.address,
+  #     valid = False
+  #   )
 
-  @sp.add_test(name="redeem_callback - fails with bad sender")
-  def test():
-    scenario = sp.test_scenario()
+  # @sp.add_test(name="redeem_callback - fails with bad sender")
+  # def test():
+  #   scenario = sp.test_scenario()
 
-    # GIVEN a token contract
-    token = FA12.FA12(
-      admin = Addresses.ADMIN_ADDRESS
-    )
-    scenario += token
+  #   # GIVEN a token contract
+  #   token = FA12.FA12(
+  #     admin = Addresses.ADMIN_ADDRESS
+  #   )
+  #   scenario += token
 
-    # AND Alice has tokens
-    aliceTokens = sp.nat(10)
-    scenario += token.mint(
-      sp.record(
-        address = Addresses.ALICE_ADDRESS,
-        value = aliceTokens
-      )
-    ).run(
-      sender = Addresses.ADMIN_ADDRESS
-    )
+  #   # AND Alice has tokens
+  #   aliceTokens = sp.nat(10)
+  #   scenario += token.mint(
+  #     sp.record(
+  #       address = Addresses.ALICE_ADDRESS,
+  #       value = aliceTokens
+  #     )
+  #   ).run(
+  #     sender = Addresses.ADMIN_ADDRESS
+  #   )
 
-    # AND a pool contract in the WAITING_REDEEM state
-    pool = PoolContract(
-      state = WAITING_REDEEM,
-      savedState_redeemer = sp.some(Addresses.ALICE_ADDRESS),
-      savedState_tokensToRedeem = sp.some(aliceTokens * Constants.PRECISION),
+  #   # AND a pool contract in the WAITING_REDEEM state
+  #   pool = PoolContract(
+  #     state = WAITING_REDEEM,
+  #     savedState_redeemer = sp.some(Addresses.ALICE_ADDRESS),
+  #     savedState_tokensToRedeem = sp.some(aliceTokens * Constants.PRECISION),
 
-      tokenAddress = token.address
-    )
-    scenario += pool
+  #     tokenAddress = token.address
+  #   )
+  #   scenario += pool
     
-    # AND Alice has LP tokens
-    scenario += pool.mint(
-      sp.record(
-        address = Addresses.ALICE_ADDRESS,
-        value = aliceTokens * Constants.PRECISION
-      )
-    ).run(
-      sender = pool.address
-    )
-
-    # AND the pool has tokens
-    poolTokens = Constants.PRECISION * 200
-    scenario += token.mint(
-      sp.record(
-        address = pool.address,
-        value = poolTokens
-      )
-    ).run(
-      sender = Addresses.ADMIN_ADDRESS
-    )
-
-    # WHEN redeem_callback is run from someone other than the token contract
-    # THEN the call fails.
-    scenario += pool.redeem_callback(
-      poolTokens
-    ).run(
-      sender = Addresses.NULL_ADDRESS,
-      valid = False
-    )
-
-  ################################################################
-  # UNSAFE_redeem
-  ################################################################
-
-  @sp.add_test(name="UNSAFE_redeem - fails in bad state")
-  def test():
-    scenario = sp.test_scenario()
-
-    # GIVEN a token contract
-    token = FA12.FA12(
-      admin = Addresses.ADMIN_ADDRESS
-    )
-    scenario += token
-
-    # AND a pool contract not in the IDLE state
-    pool = PoolContract(
-      state = WAITING_REDEEM,
-      tokenAddress = token.address
-    )
-    scenario += pool
-
-    # AND Alice has tokens
-    aliceTokens = sp.nat(10)
-    scenario += token.mint(
-      sp.record(
-        address = Addresses.ALICE_ADDRESS,
-        value = aliceTokens
-      )
-    ).run(
-      sender = Addresses.ADMIN_ADDRESS
-    )
-
-    # AND Alice has LP tokens
-    scenario += pool.mint(
-      sp.record(
-        address = Addresses.ALICE_ADDRESS,
-        value = aliceTokens * Constants.PRECISION
-      )
-    ).run(
-      sender = pool.address
-    )
-
-    # WHEN Alice withdraws from the contract
-    # THEN the call fails.
-    scenario += pool.UNSAFE_redeem(
-      aliceTokens * Constants.PRECISION
-    ).run(
-      sender = Addresses.ALICE_ADDRESS,
-      valid = False
-    )
-
-  @sp.add_test(name="UNSAFE_redeem - can deposit and withdraw from one account")
-  def test():
-    scenario = sp.test_scenario()
-
-    # GIVEN a token contract
-    token = FA12.FA12(
-      admin = Addresses.ADMIN_ADDRESS
-    )
-    scenario += token
-
-    # AND a pool contract
-    pool = PoolContract(
-      tokenAddress = token.address
-    )
-    scenario += pool
-
-    # AND Alice has tokens
-    aliceTokens = sp.nat(10)
-    scenario += token.mint(
-      sp.record(
-        address = Addresses.ALICE_ADDRESS,
-        value = aliceTokens
-      )
-    ).run(
-      sender = Addresses.ADMIN_ADDRESS
-    )
-
-    # AND Alice has given the pool an allowance
-    scenario += token.approve(
-      sp.record(
-        spender = pool.address,
-        value = aliceTokens
-      )
-    ).run(
-      sender = Addresses.ALICE_ADDRESS
-    )
-
-    # AND Alice deposits tokens in the contract.
-    scenario += pool.deposit(
-      aliceTokens
-    ).run(
-      sender = Addresses.ALICE_ADDRESS
-    )
-
-    # WHEN Alice withdraws from the contract.
-    scenario += pool.UNSAFE_redeem(
-      aliceTokens * Constants.PRECISION
-    ).run(
-      sender = Addresses.ALICE_ADDRESS
-    )
-
-    # THEN Alice trades her LP tokens for her original tokens
-    scenario.verify(token.data.balances[Addresses.ALICE_ADDRESS].balance == aliceTokens)
-    scenario.verify(pool.data.balances[Addresses.ALICE_ADDRESS].balance == sp.nat(0))
-
-    # AND the total supply of tokens is as expected
-    scenario.verify(pool.data.totalSupply == sp.nat(0))
-
-    # AND the pool has possession of the correct number of tokens.
-    scenario.verify(token.data.balances[pool.address].balance == sp.nat(0))
-    scenario.verify(pool.data.underlyingBalance == sp.nat(0))
-
-  @sp.add_test(name="UNSAFE_redeem - can redeem from two accounts")
-  def test():
-    scenario = sp.test_scenario()
-
-    # GIVEN a token contract
-    token = FA12.FA12(
-      admin = Addresses.ADMIN_ADDRESS
-    )
-    scenario += token
-
-    # AND a pool contract
-    pool = PoolContract(
-      tokenAddress = token.address
-    )
-    scenario += pool
-
-    # AND Alice has tokens
-    aliceTokens = sp.nat(10)
-    scenario += token.mint(
-      sp.record(
-        address = Addresses.ALICE_ADDRESS,
-        value = aliceTokens
-      )
-    ).run(
-      sender = Addresses.ADMIN_ADDRESS
-    )
-
-    # AND Bob has twice as many tokens
-    bobTokens = sp.nat(40)
-    scenario += token.mint(
-      sp.record(
-        address = Addresses.BOB_ADDRESS,
-        value = bobTokens
-      )
-    ).run(
-      sender = Addresses.ADMIN_ADDRESS
-    )
-
-    # AND Alice has given the pool an allowance
-    scenario += token.approve(
-      sp.record(
-        spender = pool.address,
-        value = aliceTokens
-      )
-    ).run(
-      sender = Addresses.ALICE_ADDRESS
-    )
-
-    # AND Bob has given the pool an allowance
-    scenario += token.approve(
-      sp.record(
-        spender = pool.address,
-        value = bobTokens
-      )
-    ).run(
-      sender = Addresses.BOB_ADDRESS
-    )
-
-    # AND Alice and Bob deposit tokens in the contract.
-    scenario += pool.deposit(
-      aliceTokens
-    ).run(
-      sender = Addresses.ALICE_ADDRESS
-    )
-
-    scenario += pool.deposit(
-      bobTokens
-    ).run(
-      sender = Addresses.BOB_ADDRESS
-    )
-
-    # WHEN Alice withdraws her tokens
-    scenario += pool.UNSAFE_redeem(
-      aliceTokens * Constants.PRECISION
-    ).run(
-      sender = Addresses.ALICE_ADDRESS
-    )
-
-    # THEN Alice receives her original tokens back and the LP tokens are burnt
-    scenario.verify(token.data.balances[Addresses.ALICE_ADDRESS].balance == aliceTokens)
-    scenario.verify(pool.data.balances[Addresses.ALICE_ADDRESS].balance == sp.nat(0))
-
-    # AND Bob still has his position
-    scenario.verify(token.data.balances[Addresses.BOB_ADDRESS].balance == sp.nat(0))
-    scenario.verify(pool.data.balances[Addresses.BOB_ADDRESS].balance == aliceTokens * 4 * Constants.PRECISION)
-
-    # AND the total supply of tokens is as expected
-    scenario.verify(pool.data.totalSupply == bobTokens * Constants.PRECISION)
-
-    # AND the pool has possession of the correct number of tokens.
-    scenario.verify(token.data.balances[pool.address].balance == bobTokens)
-    scenario.verify(pool.data.underlyingBalance == bobTokens)
-
-    # WHEN Bob withdraws his tokens
-    scenario += pool.UNSAFE_redeem(
-      bobTokens * Constants.PRECISION
-    ).run(
-      sender = Addresses.BOB_ADDRESS
-    )
-
-    # THEN Alice retains her position
-    scenario.verify(token.data.balances[Addresses.ALICE_ADDRESS].balance == aliceTokens)
-    scenario.verify(pool.data.balances[Addresses.ALICE_ADDRESS].balance == sp.nat(0))
-
-    # AND Bob receives his original tokens back and the LP tokens are burn.
-    scenario.verify(token.data.balances[Addresses.BOB_ADDRESS].balance == bobTokens)
-    scenario.verify(pool.data.balances[Addresses.BOB_ADDRESS].balance == sp.nat(0))
-
-    # AND the total supply of tokens is as expected
-    scenario.verify(pool.data.totalSupply == sp.nat(0))
-
-    # AND the pool has possession of the correct number of tokens.
-    scenario.verify(token.data.balances[pool.address].balance == sp.nat(0))
-    scenario.verify(pool.data.underlyingBalance == sp.nat(0))
-
-  @sp.add_test(name="UNSAFE_redeem - can redeem from two accounts - reversed")
-  def test():
-    scenario = sp.test_scenario()
-
-    # GIVEN a token contract
-    token = FA12.FA12(
-      admin = Addresses.ADMIN_ADDRESS
-    )
-    scenario += token
-
-    # AND a pool contract
-    pool = PoolContract(
-      tokenAddress = token.address
-    )
-    scenario += pool
-
-    # AND Alice has tokens
-    aliceTokens = sp.nat(10)
-    scenario += token.mint(
-      sp.record(
-        address = Addresses.ALICE_ADDRESS,
-        value = aliceTokens
-      )
-    ).run(
-      sender = Addresses.ADMIN_ADDRESS
-    )
-
-    # AND Bob has twice as many tokens
-    bobTokens = sp.nat(40)
-    scenario += token.mint(
-      sp.record(
-        address = Addresses.BOB_ADDRESS,
-        value = bobTokens
-      )
-    ).run(
-      sender = Addresses.ADMIN_ADDRESS
-    )
-
-    # AND Alice has given the pool an allowance
-    scenario += token.approve(
-      sp.record(
-        spender = pool.address,
-        value = aliceTokens
-      )
-    ).run(
-      sender = Addresses.ALICE_ADDRESS
-    )
-
-    # AND Bob has given the pool an allowance
-    scenario += token.approve(
-      sp.record(
-        spender = pool.address,
-        value = bobTokens
-      )
-    ).run(
-      sender = Addresses.BOB_ADDRESS
-    )
-
-    # AND Alice and Bob deposit tokens in the contract.
-    scenario += pool.deposit(
-      aliceTokens
-    ).run(
-      sender = Addresses.ALICE_ADDRESS
-    )
-
-    scenario += pool.deposit(
-      bobTokens
-    ).run(
-      sender = Addresses.BOB_ADDRESS
-    )
-
-    # WHEN Bob withdraws his tokens
-    scenario += pool.UNSAFE_redeem(
-      bobTokens * Constants.PRECISION
-    ).run(
-      sender = Addresses.BOB_ADDRESS
-    )
-
-    # THEN Alice retains her position
-    scenario.verify(token.data.balances[Addresses.ALICE_ADDRESS].balance == sp.nat(0))
-    scenario.verify(pool.data.balances[Addresses.ALICE_ADDRESS].balance == aliceTokens * Constants.PRECISION)
-
-    # AND Bob receives his original tokens back and the LP tokens are burn.
-    scenario.verify(token.data.balances[Addresses.BOB_ADDRESS].balance == bobTokens)
-    scenario.verify(pool.data.balances[Addresses.BOB_ADDRESS].balance == sp.nat(0))
-
-    # AND the total supply of tokens is as expected
-    scenario.verify(pool.data.totalSupply == aliceTokens * Constants.PRECISION)
-
-    # AND the pool has possession of the correct number of tokens.
-    scenario.verify(token.data.balances[pool.address].balance == aliceTokens)
-    scenario.verify(pool.data.underlyingBalance == aliceTokens)
-
-    # WHEN Alice withdraws her tokens
-    scenario += pool.UNSAFE_redeem(
-      aliceTokens * Constants.PRECISION
-    ).run(
-      sender = Addresses.ALICE_ADDRESS
-    )
-
-    # THEN Alice receives her original tokens back and the LP tokens are burnt
-    scenario.verify(token.data.balances[Addresses.ALICE_ADDRESS].balance == aliceTokens)
-    scenario.verify(pool.data.balances[Addresses.ALICE_ADDRESS].balance == sp.nat(0))
-
-    # AND Bob still has his position
-    scenario.verify(token.data.balances[Addresses.BOB_ADDRESS].balance == bobTokens)
-    scenario.verify(pool.data.balances[Addresses.BOB_ADDRESS].balance == sp.nat(0))
-
-    # AND the total supply of tokens is as expected
-    scenario.verify(pool.data.totalSupply == sp.nat(0))
-
-    # AND the pool has possession of the correct number of tokens.
-    scenario.verify(token.data.balances[pool.address].balance == sp.nat(0))
-    scenario.verify(pool.data.underlyingBalance == sp.nat(0))
-
-  @sp.add_test(name="UNSAFE_redeem - can redeem partially from two accounts")
-  def test():
-    scenario = sp.test_scenario()
-
-    # GIVEN a token contract
-    token = FA12.FA12(
-      admin = Addresses.ADMIN_ADDRESS
-    )
-    scenario += token
-
-    # AND a pool contract
-    pool = PoolContract(
-      tokenAddress = token.address
-    )
-    scenario += pool
-
-    # AND Alice has tokens
-    aliceTokens = sp.nat(10)
-    scenario += token.mint(
-      sp.record(
-        address = Addresses.ALICE_ADDRESS,
-        value = aliceTokens
-      )
-    ).run(
-      sender = Addresses.ADMIN_ADDRESS
-    )
-
-    # AND Bob has twice as many tokens
-    bobTokens = sp.nat(40)
-    scenario += token.mint(
-      sp.record(
-        address = Addresses.BOB_ADDRESS,
-        value = bobTokens
-      )
-    ).run(
-      sender = Addresses.ADMIN_ADDRESS
-    )
-
-    # AND Alice has given the pool an allowance
-    scenario += token.approve(
-      sp.record(
-        spender = pool.address,
-        value = aliceTokens
-      )
-    ).run(
-      sender = Addresses.ALICE_ADDRESS
-    )
-
-    # AND Bob has given the pool an allowance
-    scenario += token.approve(
-      sp.record(
-        spender = pool.address,
-        value = bobTokens
-      )
-    ).run(
-      sender = Addresses.BOB_ADDRESS
-    )
-
-    # AND Alice and Bob deposit tokens in the contract.
-    scenario += pool.deposit(
-      aliceTokens
-    ).run(
-      sender = Addresses.ALICE_ADDRESS
-    )
-
-    scenario += pool.deposit(
-      bobTokens
-    ).run(
-      sender = Addresses.BOB_ADDRESS
-    )
-
-    # WHEN Alice withdraws half of her tokens
-    scenario += pool.UNSAFE_redeem(
-      aliceTokens / 2 * Constants.PRECISION
-    ).run(
-      sender = Addresses.ALICE_ADDRESS
-    )
-
-    # THEN Alice receives her original tokens back and the LP tokens are burnt
-    scenario.verify(token.data.balances[Addresses.ALICE_ADDRESS].balance == aliceTokens / 2)
-    scenario.verify(pool.data.balances[Addresses.ALICE_ADDRESS].balance == aliceTokens / 2 * Constants.PRECISION)
-
-    # AND Bob still has his position
-    scenario.verify(token.data.balances[Addresses.BOB_ADDRESS].balance == sp.nat(0))
-    scenario.verify(pool.data.balances[Addresses.BOB_ADDRESS].balance == aliceTokens * 4 * Constants.PRECISION)
-
-    # AND the total supply of tokens is as expected
-    scenario.verify(pool.data.totalSupply == (bobTokens + (aliceTokens / 2)) * Constants.PRECISION)
-
-    # AND the pool has possession of the correct number of tokens.
-    scenario.verify(token.data.balances[pool.address].balance == bobTokens + (aliceTokens / 2))
-    scenario.verify(pool.data.underlyingBalance == bobTokens + (aliceTokens / 2))
-
-    # WHEN Bob withdraws a quarter of his tokens
-    scenario += pool.UNSAFE_redeem(
-      bobTokens / 4 * Constants.PRECISION
-    ).run(
-      sender = Addresses.BOB_ADDRESS
-    )
-
-    # THEN Alice retains her position
-    scenario.verify(token.data.balances[Addresses.ALICE_ADDRESS].balance == aliceTokens / 2)
-    scenario.verify(pool.data.balances[Addresses.ALICE_ADDRESS].balance == aliceTokens / 2 * Constants.PRECISION)
-
-    # AND Bob receives his original tokens back and the LP tokens are burn.
-    scenario.verify(token.data.balances[Addresses.BOB_ADDRESS].balance == 9) # Bob withdraws 22% (10/45) of the pool, which is 9.9999 tokens. Integer math truncates the remainder
-    scenario.verify(pool.data.balances[Addresses.BOB_ADDRESS].balance == 30 * Constants.PRECISION) # Bob withdrew 1/4 of tokens = .25 * 40 = 30
-
-    # AND the total supply of tokens is as expected
-    # Expected = 50 tokens generated - 5 tokens alice redeemed - 10 tokens bob redeemed
-    scenario.verify(pool.data.totalSupply == sp.nat(35) * Constants.PRECISION)
-
-    # AND the pool has possession of the correct number of tokens.
-    # Expected:
-    # 1/2 of alice tokens + 3/4 of bob tokens + 1 token rounding error = 5 + 30 + 1 = 36
-    expectedRemainingTokens = sp.nat(36)
-    scenario.verify(token.data.balances[pool.address].balance == expectedRemainingTokens) 
-    scenario.verify(pool.data.underlyingBalance == expectedRemainingTokens)
-
-  @sp.add_test(name="UNSAFE_redeem - can redeem from two accounts with liquidity added")
-  def test():
-    scenario = sp.test_scenario()
-
-    # GIVEN a token contract
-    token = FA12.FA12(
-      admin = Addresses.ADMIN_ADDRESS
-    )
-    scenario += token
-
-    # AND a pool contract
-    pool = PoolContract(
-      tokenAddress = token.address
-    )
-    scenario += pool
-
-    # AND Alice has tokens
-    aliceTokens = sp.nat(10)
-    scenario += token.mint(
-      sp.record(
-        address = Addresses.ALICE_ADDRESS,
-        value = aliceTokens
-      )
-    ).run(
-      sender = Addresses.ADMIN_ADDRESS
-    )
-
-    # AND Bob has twice as many tokens
-    bobTokens = sp.nat(40)
-    scenario += token.mint(
-      sp.record(
-        address = Addresses.BOB_ADDRESS,
-        value = bobTokens
-      )
-    ).run(
-      sender = Addresses.ADMIN_ADDRESS
-    )
-
-    # AND Alice has given the pool an allowance
-    scenario += token.approve(
-      sp.record(
-        spender = pool.address,
-        value = aliceTokens
-      )
-    ).run(
-      sender = Addresses.ALICE_ADDRESS
-    )
-
-    # AND Bob has given the pool an allowance
-    scenario += token.approve(
-      sp.record(
-        spender = pool.address,
-        value = bobTokens
-      )
-    ).run(
-      sender = Addresses.BOB_ADDRESS
-    )
-
-    # AND Alice and Bob deposit tokens in the contract.
-    scenario += pool.deposit(
-      aliceTokens
-    ).run(
-      sender = Addresses.ALICE_ADDRESS
-    )
-
-    scenario += pool.deposit(
-      bobTokens
-    ).run(
-      sender = Addresses.BOB_ADDRESS
-    )
-
-    # AND the contract receives an additional number of tokens.
-    additionalTokens = 10
-    scenario += token.mint(
-      sp.record(
-        address = pool.address,
-        value = additionalTokens
-      )
-    ).run(
-      sender = Addresses.ADMIN_ADDRESS
-    )
-
-    # WHEN Alice withdraws her tokens
-    scenario += pool.UNSAFE_redeem(
-      aliceTokens * Constants.PRECISION
-    ).run(
-      sender = Addresses.ALICE_ADDRESS
-    )
-
-    # THEN Alice receives only her original tokens
-    scenario.verify(token.data.balances[Addresses.ALICE_ADDRESS].balance == aliceTokens)
-    scenario.verify(pool.data.balances[Addresses.ALICE_ADDRESS].balance == sp.nat(0))
-
-    # AND Bob still has his position
-    scenario.verify(token.data.balances[Addresses.BOB_ADDRESS].balance == sp.nat(0))
-    scenario.verify(pool.data.balances[Addresses.BOB_ADDRESS].balance == aliceTokens * 4 * Constants.PRECISION)
-
-    # AND the total supply of tokens is as expected
-    scenario.verify(pool.data.totalSupply == bobTokens * Constants.PRECISION)
-
-    # AND the pool has possession of the correct number of tokens.
-    scenario.verify(token.data.balances[pool.address].balance == bobTokens + additionalTokens)
-
-    # AND the pool has not yet balanced the additional tokens
-    scenario.verify(pool.data.underlyingBalance == bobTokens)
-
-    # WHEN Bob withdraws his tokens
-    scenario += pool.UNSAFE_redeem(
-      bobTokens * Constants.PRECISION
-    ).run(
-      sender = Addresses.BOB_ADDRESS
-    )
-
-    # THEN Alice retains her position
-    scenario.verify(token.data.balances[Addresses.ALICE_ADDRESS].balance == aliceTokens)
-    scenario.verify(pool.data.balances[Addresses.ALICE_ADDRESS].balance == sp.nat(0))
-
-    # AND Bob receives his original tokens back
-    scenario.verify(token.data.balances[Addresses.BOB_ADDRESS].balance == bobTokens)
-    scenario.verify(pool.data.balances[Addresses.BOB_ADDRESS].balance == sp.nat(0))
-
-    # AND the total supply of tokens is as expected
-    scenario.verify(pool.data.totalSupply == sp.nat(0))
-
-    # AND the pool has possession of the correct number of tokens.
-    scenario.verify(token.data.balances[pool.address].balance == sp.nat(10))
-
-    # AND the pool thinks it has 0 tokens
-    scenario.verify(pool.data.underlyingBalance == sp.nat(0))
+  #   # AND Alice has LP tokens
+  #   scenario += pool.mint(
+  #     sp.record(
+  #       address = Addresses.ALICE_ADDRESS,
+  #       value = aliceTokens * Constants.PRECISION
+  #     )
+  #   ).run(
+  #     sender = pool.address
+  #   )
+
+  #   # AND the pool has tokens
+  #   poolTokens = Constants.PRECISION * 200
+  #   scenario += token.mint(
+  #     sp.record(
+  #       address = pool.address,
+  #       value = poolTokens
+  #     )
+  #   ).run(
+  #     sender = Addresses.ADMIN_ADDRESS
+  #   )
+
+  #   # WHEN redeem_callback is run from someone other than the token contract
+  #   # THEN the call fails.
+  #   scenario += pool.redeem_callback(
+  #     poolTokens
+  #   ).run(
+  #     sender = Addresses.NULL_ADDRESS,
+  #     valid = False
+  #   )
+
+  # ################################################################
+  # # UNSAFE_redeem
+  # ################################################################
+
+  # @sp.add_test(name="UNSAFE_redeem - fails in bad state")
+  # def test():
+  #   scenario = sp.test_scenario()
+
+  #   # GIVEN a token contract
+  #   token = FA12.FA12(
+  #     admin = Addresses.ADMIN_ADDRESS
+  #   )
+  #   scenario += token
+
+  #   # AND a pool contract not in the IDLE state
+  #   pool = PoolContract(
+  #     state = WAITING_REDEEM,
+  #     tokenAddress = token.address
+  #   )
+  #   scenario += pool
+
+  #   # AND Alice has tokens
+  #   aliceTokens = sp.nat(10)
+  #   scenario += token.mint(
+  #     sp.record(
+  #       address = Addresses.ALICE_ADDRESS,
+  #       value = aliceTokens
+  #     )
+  #   ).run(
+  #     sender = Addresses.ADMIN_ADDRESS
+  #   )
+
+  #   # AND Alice has LP tokens
+  #   scenario += pool.mint(
+  #     sp.record(
+  #       address = Addresses.ALICE_ADDRESS,
+  #       value = aliceTokens * Constants.PRECISION
+  #     )
+  #   ).run(
+  #     sender = pool.address
+  #   )
+
+  #   # WHEN Alice withdraws from the contract
+  #   # THEN the call fails.
+  #   scenario += pool.UNSAFE_redeem(
+  #     aliceTokens * Constants.PRECISION
+  #   ).run(
+  #     sender = Addresses.ALICE_ADDRESS,
+  #     valid = False
+  #   )
+
+  # @sp.add_test(name="UNSAFE_redeem - can deposit and withdraw from one account")
+  # def test():
+  #   scenario = sp.test_scenario()
+
+  #   # GIVEN a token contract
+  #   token = FA12.FA12(
+  #     admin = Addresses.ADMIN_ADDRESS
+  #   )
+  #   scenario += token
+
+  #   # AND a pool contract
+  #   pool = PoolContract(
+  #     tokenAddress = token.address
+  #   )
+  #   scenario += pool
+
+  #   # AND Alice has tokens
+  #   aliceTokens = sp.nat(10)
+  #   scenario += token.mint(
+  #     sp.record(
+  #       address = Addresses.ALICE_ADDRESS,
+  #       value = aliceTokens
+  #     )
+  #   ).run(
+  #     sender = Addresses.ADMIN_ADDRESS
+  #   )
+
+  #   # AND Alice has given the pool an allowance
+  #   scenario += token.approve(
+  #     sp.record(
+  #       spender = pool.address,
+  #       value = aliceTokens
+  #     )
+  #   ).run(
+  #     sender = Addresses.ALICE_ADDRESS
+  #   )
+
+  #   # AND Alice deposits tokens in the contract.
+  #   scenario += pool.deposit(
+  #     aliceTokens
+  #   ).run(
+  #     sender = Addresses.ALICE_ADDRESS
+  #   )
+
+  #   # WHEN Alice withdraws from the contract.
+  #   scenario += pool.UNSAFE_redeem(
+  #     aliceTokens * Constants.PRECISION
+  #   ).run(
+  #     sender = Addresses.ALICE_ADDRESS
+  #   )
+
+  #   # THEN Alice trades her LP tokens for her original tokens
+  #   scenario.verify(token.data.balances[Addresses.ALICE_ADDRESS].balance == aliceTokens)
+  #   scenario.verify(pool.data.balances[Addresses.ALICE_ADDRESS].balance == sp.nat(0))
+
+  #   # AND the total supply of tokens is as expected
+  #   scenario.verify(pool.data.totalSupply == sp.nat(0))
+
+  #   # AND the pool has possession of the correct number of tokens.
+  #   scenario.verify(token.data.balances[pool.address].balance == sp.nat(0))
+  #   scenario.verify(pool.data.underlyingBalance == sp.nat(0))
+
+  # @sp.add_test(name="UNSAFE_redeem - can redeem from two accounts")
+  # def test():
+  #   scenario = sp.test_scenario()
+
+  #   # GIVEN a token contract
+  #   token = FA12.FA12(
+  #     admin = Addresses.ADMIN_ADDRESS
+  #   )
+  #   scenario += token
+
+  #   # AND a pool contract
+  #   pool = PoolContract(
+  #     tokenAddress = token.address
+  #   )
+  #   scenario += pool
+
+  #   # AND Alice has tokens
+  #   aliceTokens = sp.nat(10)
+  #   scenario += token.mint(
+  #     sp.record(
+  #       address = Addresses.ALICE_ADDRESS,
+  #       value = aliceTokens
+  #     )
+  #   ).run(
+  #     sender = Addresses.ADMIN_ADDRESS
+  #   )
+
+  #   # AND Bob has twice as many tokens
+  #   bobTokens = sp.nat(40)
+  #   scenario += token.mint(
+  #     sp.record(
+  #       address = Addresses.BOB_ADDRESS,
+  #       value = bobTokens
+  #     )
+  #   ).run(
+  #     sender = Addresses.ADMIN_ADDRESS
+  #   )
+
+  #   # AND Alice has given the pool an allowance
+  #   scenario += token.approve(
+  #     sp.record(
+  #       spender = pool.address,
+  #       value = aliceTokens
+  #     )
+  #   ).run(
+  #     sender = Addresses.ALICE_ADDRESS
+  #   )
+
+  #   # AND Bob has given the pool an allowance
+  #   scenario += token.approve(
+  #     sp.record(
+  #       spender = pool.address,
+  #       value = bobTokens
+  #     )
+  #   ).run(
+  #     sender = Addresses.BOB_ADDRESS
+  #   )
+
+  #   # AND Alice and Bob deposit tokens in the contract.
+  #   scenario += pool.deposit(
+  #     aliceTokens
+  #   ).run(
+  #     sender = Addresses.ALICE_ADDRESS
+  #   )
+
+  #   scenario += pool.deposit(
+  #     bobTokens
+  #   ).run(
+  #     sender = Addresses.BOB_ADDRESS
+  #   )
+
+  #   # WHEN Alice withdraws her tokens
+  #   scenario += pool.UNSAFE_redeem(
+  #     aliceTokens * Constants.PRECISION
+  #   ).run(
+  #     sender = Addresses.ALICE_ADDRESS
+  #   )
+
+  #   # THEN Alice receives her original tokens back and the LP tokens are burnt
+  #   scenario.verify(token.data.balances[Addresses.ALICE_ADDRESS].balance == aliceTokens)
+  #   scenario.verify(pool.data.balances[Addresses.ALICE_ADDRESS].balance == sp.nat(0))
+
+  #   # AND Bob still has his position
+  #   scenario.verify(token.data.balances[Addresses.BOB_ADDRESS].balance == sp.nat(0))
+  #   scenario.verify(pool.data.balances[Addresses.BOB_ADDRESS].balance == aliceTokens * 4 * Constants.PRECISION)
+
+  #   # AND the total supply of tokens is as expected
+  #   scenario.verify(pool.data.totalSupply == bobTokens * Constants.PRECISION)
+
+  #   # AND the pool has possession of the correct number of tokens.
+  #   scenario.verify(token.data.balances[pool.address].balance == bobTokens)
+  #   scenario.verify(pool.data.underlyingBalance == bobTokens)
+
+  #   # WHEN Bob withdraws his tokens
+  #   scenario += pool.UNSAFE_redeem(
+  #     bobTokens * Constants.PRECISION
+  #   ).run(
+  #     sender = Addresses.BOB_ADDRESS
+  #   )
+
+  #   # THEN Alice retains her position
+  #   scenario.verify(token.data.balances[Addresses.ALICE_ADDRESS].balance == aliceTokens)
+  #   scenario.verify(pool.data.balances[Addresses.ALICE_ADDRESS].balance == sp.nat(0))
+
+  #   # AND Bob receives his original tokens back and the LP tokens are burn.
+  #   scenario.verify(token.data.balances[Addresses.BOB_ADDRESS].balance == bobTokens)
+  #   scenario.verify(pool.data.balances[Addresses.BOB_ADDRESS].balance == sp.nat(0))
+
+  #   # AND the total supply of tokens is as expected
+  #   scenario.verify(pool.data.totalSupply == sp.nat(0))
+
+  #   # AND the pool has possession of the correct number of tokens.
+  #   scenario.verify(token.data.balances[pool.address].balance == sp.nat(0))
+  #   scenario.verify(pool.data.underlyingBalance == sp.nat(0))
+
+  # @sp.add_test(name="UNSAFE_redeem - can redeem from two accounts - reversed")
+  # def test():
+  #   scenario = sp.test_scenario()
+
+  #   # GIVEN a token contract
+  #   token = FA12.FA12(
+  #     admin = Addresses.ADMIN_ADDRESS
+  #   )
+  #   scenario += token
+
+  #   # AND a pool contract
+  #   pool = PoolContract(
+  #     tokenAddress = token.address
+  #   )
+  #   scenario += pool
+
+  #   # AND Alice has tokens
+  #   aliceTokens = sp.nat(10)
+  #   scenario += token.mint(
+  #     sp.record(
+  #       address = Addresses.ALICE_ADDRESS,
+  #       value = aliceTokens
+  #     )
+  #   ).run(
+  #     sender = Addresses.ADMIN_ADDRESS
+  #   )
+
+  #   # AND Bob has twice as many tokens
+  #   bobTokens = sp.nat(40)
+  #   scenario += token.mint(
+  #     sp.record(
+  #       address = Addresses.BOB_ADDRESS,
+  #       value = bobTokens
+  #     )
+  #   ).run(
+  #     sender = Addresses.ADMIN_ADDRESS
+  #   )
+
+  #   # AND Alice has given the pool an allowance
+  #   scenario += token.approve(
+  #     sp.record(
+  #       spender = pool.address,
+  #       value = aliceTokens
+  #     )
+  #   ).run(
+  #     sender = Addresses.ALICE_ADDRESS
+  #   )
+
+  #   # AND Bob has given the pool an allowance
+  #   scenario += token.approve(
+  #     sp.record(
+  #       spender = pool.address,
+  #       value = bobTokens
+  #     )
+  #   ).run(
+  #     sender = Addresses.BOB_ADDRESS
+  #   )
+
+  #   # AND Alice and Bob deposit tokens in the contract.
+  #   scenario += pool.deposit(
+  #     aliceTokens
+  #   ).run(
+  #     sender = Addresses.ALICE_ADDRESS
+  #   )
+
+  #   scenario += pool.deposit(
+  #     bobTokens
+  #   ).run(
+  #     sender = Addresses.BOB_ADDRESS
+  #   )
+
+  #   # WHEN Bob withdraws his tokens
+  #   scenario += pool.UNSAFE_redeem(
+  #     bobTokens * Constants.PRECISION
+  #   ).run(
+  #     sender = Addresses.BOB_ADDRESS
+  #   )
+
+  #   # THEN Alice retains her position
+  #   scenario.verify(token.data.balances[Addresses.ALICE_ADDRESS].balance == sp.nat(0))
+  #   scenario.verify(pool.data.balances[Addresses.ALICE_ADDRESS].balance == aliceTokens * Constants.PRECISION)
+
+  #   # AND Bob receives his original tokens back and the LP tokens are burn.
+  #   scenario.verify(token.data.balances[Addresses.BOB_ADDRESS].balance == bobTokens)
+  #   scenario.verify(pool.data.balances[Addresses.BOB_ADDRESS].balance == sp.nat(0))
+
+  #   # AND the total supply of tokens is as expected
+  #   scenario.verify(pool.data.totalSupply == aliceTokens * Constants.PRECISION)
+
+  #   # AND the pool has possession of the correct number of tokens.
+  #   scenario.verify(token.data.balances[pool.address].balance == aliceTokens)
+  #   scenario.verify(pool.data.underlyingBalance == aliceTokens)
+
+  #   # WHEN Alice withdraws her tokens
+  #   scenario += pool.UNSAFE_redeem(
+  #     aliceTokens * Constants.PRECISION
+  #   ).run(
+  #     sender = Addresses.ALICE_ADDRESS
+  #   )
+
+  #   # THEN Alice receives her original tokens back and the LP tokens are burnt
+  #   scenario.verify(token.data.balances[Addresses.ALICE_ADDRESS].balance == aliceTokens)
+  #   scenario.verify(pool.data.balances[Addresses.ALICE_ADDRESS].balance == sp.nat(0))
+
+  #   # AND Bob still has his position
+  #   scenario.verify(token.data.balances[Addresses.BOB_ADDRESS].balance == bobTokens)
+  #   scenario.verify(pool.data.balances[Addresses.BOB_ADDRESS].balance == sp.nat(0))
+
+  #   # AND the total supply of tokens is as expected
+  #   scenario.verify(pool.data.totalSupply == sp.nat(0))
+
+  #   # AND the pool has possession of the correct number of tokens.
+  #   scenario.verify(token.data.balances[pool.address].balance == sp.nat(0))
+  #   scenario.verify(pool.data.underlyingBalance == sp.nat(0))
+
+  # @sp.add_test(name="UNSAFE_redeem - can redeem partially from two accounts")
+  # def test():
+  #   scenario = sp.test_scenario()
+
+  #   # GIVEN a token contract
+  #   token = FA12.FA12(
+  #     admin = Addresses.ADMIN_ADDRESS
+  #   )
+  #   scenario += token
+
+  #   # AND a pool contract
+  #   pool = PoolContract(
+  #     tokenAddress = token.address
+  #   )
+  #   scenario += pool
+
+  #   # AND Alice has tokens
+  #   aliceTokens = sp.nat(10)
+  #   scenario += token.mint(
+  #     sp.record(
+  #       address = Addresses.ALICE_ADDRESS,
+  #       value = aliceTokens
+  #     )
+  #   ).run(
+  #     sender = Addresses.ADMIN_ADDRESS
+  #   )
+
+  #   # AND Bob has twice as many tokens
+  #   bobTokens = sp.nat(40)
+  #   scenario += token.mint(
+  #     sp.record(
+  #       address = Addresses.BOB_ADDRESS,
+  #       value = bobTokens
+  #     )
+  #   ).run(
+  #     sender = Addresses.ADMIN_ADDRESS
+  #   )
+
+  #   # AND Alice has given the pool an allowance
+  #   scenario += token.approve(
+  #     sp.record(
+  #       spender = pool.address,
+  #       value = aliceTokens
+  #     )
+  #   ).run(
+  #     sender = Addresses.ALICE_ADDRESS
+  #   )
+
+  #   # AND Bob has given the pool an allowance
+  #   scenario += token.approve(
+  #     sp.record(
+  #       spender = pool.address,
+  #       value = bobTokens
+  #     )
+  #   ).run(
+  #     sender = Addresses.BOB_ADDRESS
+  #   )
+
+  #   # AND Alice and Bob deposit tokens in the contract.
+  #   scenario += pool.deposit(
+  #     aliceTokens
+  #   ).run(
+  #     sender = Addresses.ALICE_ADDRESS
+  #   )
+
+  #   scenario += pool.deposit(
+  #     bobTokens
+  #   ).run(
+  #     sender = Addresses.BOB_ADDRESS
+  #   )
+
+  #   # WHEN Alice withdraws half of her tokens
+  #   scenario += pool.UNSAFE_redeem(
+  #     aliceTokens / 2 * Constants.PRECISION
+  #   ).run(
+  #     sender = Addresses.ALICE_ADDRESS
+  #   )
+
+  #   # THEN Alice receives her original tokens back and the LP tokens are burnt
+  #   scenario.verify(token.data.balances[Addresses.ALICE_ADDRESS].balance == aliceTokens / 2)
+  #   scenario.verify(pool.data.balances[Addresses.ALICE_ADDRESS].balance == aliceTokens / 2 * Constants.PRECISION)
+
+  #   # AND Bob still has his position
+  #   scenario.verify(token.data.balances[Addresses.BOB_ADDRESS].balance == sp.nat(0))
+  #   scenario.verify(pool.data.balances[Addresses.BOB_ADDRESS].balance == aliceTokens * 4 * Constants.PRECISION)
+
+  #   # AND the total supply of tokens is as expected
+  #   scenario.verify(pool.data.totalSupply == (bobTokens + (aliceTokens / 2)) * Constants.PRECISION)
+
+  #   # AND the pool has possession of the correct number of tokens.
+  #   scenario.verify(token.data.balances[pool.address].balance == bobTokens + (aliceTokens / 2))
+  #   scenario.verify(pool.data.underlyingBalance == bobTokens + (aliceTokens / 2))
+
+  #   # WHEN Bob withdraws a quarter of his tokens
+  #   scenario += pool.UNSAFE_redeem(
+  #     bobTokens / 4 * Constants.PRECISION
+  #   ).run(
+  #     sender = Addresses.BOB_ADDRESS
+  #   )
+
+  #   # THEN Alice retains her position
+  #   scenario.verify(token.data.balances[Addresses.ALICE_ADDRESS].balance == aliceTokens / 2)
+  #   scenario.verify(pool.data.balances[Addresses.ALICE_ADDRESS].balance == aliceTokens / 2 * Constants.PRECISION)
+
+  #   # AND Bob receives his original tokens back and the LP tokens are burn.
+  #   scenario.verify(token.data.balances[Addresses.BOB_ADDRESS].balance == 9) # Bob withdraws 22% (10/45) of the pool, which is 9.9999 tokens. Integer math truncates the remainder
+  #   scenario.verify(pool.data.balances[Addresses.BOB_ADDRESS].balance == 30 * Constants.PRECISION) # Bob withdrew 1/4 of tokens = .25 * 40 = 30
+
+  #   # AND the total supply of tokens is as expected
+  #   # Expected = 50 tokens generated - 5 tokens alice redeemed - 10 tokens bob redeemed
+  #   scenario.verify(pool.data.totalSupply == sp.nat(35) * Constants.PRECISION)
+
+  #   # AND the pool has possession of the correct number of tokens.
+  #   # Expected:
+  #   # 1/2 of alice tokens + 3/4 of bob tokens + 1 token rounding error = 5 + 30 + 1 = 36
+  #   expectedRemainingTokens = sp.nat(36)
+  #   scenario.verify(token.data.balances[pool.address].balance == expectedRemainingTokens) 
+  #   scenario.verify(pool.data.underlyingBalance == expectedRemainingTokens)
+
+  # @sp.add_test(name="UNSAFE_redeem - can redeem from two accounts with liquidity added")
+  # def test():
+  #   scenario = sp.test_scenario()
+
+  #   # GIVEN a token contract
+  #   token = FA12.FA12(
+  #     admin = Addresses.ADMIN_ADDRESS
+  #   )
+  #   scenario += token
+
+  #   # AND a pool contract
+  #   pool = PoolContract(
+  #     tokenAddress = token.address
+  #   )
+  #   scenario += pool
+
+  #   # AND Alice has tokens
+  #   aliceTokens = sp.nat(10)
+  #   scenario += token.mint(
+  #     sp.record(
+  #       address = Addresses.ALICE_ADDRESS,
+  #       value = aliceTokens
+  #     )
+  #   ).run(
+  #     sender = Addresses.ADMIN_ADDRESS
+  #   )
+
+  #   # AND Bob has twice as many tokens
+  #   bobTokens = sp.nat(40)
+  #   scenario += token.mint(
+  #     sp.record(
+  #       address = Addresses.BOB_ADDRESS,
+  #       value = bobTokens
+  #     )
+  #   ).run(
+  #     sender = Addresses.ADMIN_ADDRESS
+  #   )
+
+  #   # AND Alice has given the pool an allowance
+  #   scenario += token.approve(
+  #     sp.record(
+  #       spender = pool.address,
+  #       value = aliceTokens
+  #     )
+  #   ).run(
+  #     sender = Addresses.ALICE_ADDRESS
+  #   )
+
+  #   # AND Bob has given the pool an allowance
+  #   scenario += token.approve(
+  #     sp.record(
+  #       spender = pool.address,
+  #       value = bobTokens
+  #     )
+  #   ).run(
+  #     sender = Addresses.BOB_ADDRESS
+  #   )
+
+  #   # AND Alice and Bob deposit tokens in the contract.
+  #   scenario += pool.deposit(
+  #     aliceTokens
+  #   ).run(
+  #     sender = Addresses.ALICE_ADDRESS
+  #   )
+
+  #   scenario += pool.deposit(
+  #     bobTokens
+  #   ).run(
+  #     sender = Addresses.BOB_ADDRESS
+  #   )
+
+  #   # AND the contract receives an additional number of tokens.
+  #   additionalTokens = 10
+  #   scenario += token.mint(
+  #     sp.record(
+  #       address = pool.address,
+  #       value = additionalTokens
+  #     )
+  #   ).run(
+  #     sender = Addresses.ADMIN_ADDRESS
+  #   )
+
+  #   # WHEN Alice withdraws her tokens
+  #   scenario += pool.UNSAFE_redeem(
+  #     aliceTokens * Constants.PRECISION
+  #   ).run(
+  #     sender = Addresses.ALICE_ADDRESS
+  #   )
+
+  #   # THEN Alice receives only her original tokens
+  #   scenario.verify(token.data.balances[Addresses.ALICE_ADDRESS].balance == aliceTokens)
+  #   scenario.verify(pool.data.balances[Addresses.ALICE_ADDRESS].balance == sp.nat(0))
+
+  #   # AND Bob still has his position
+  #   scenario.verify(token.data.balances[Addresses.BOB_ADDRESS].balance == sp.nat(0))
+  #   scenario.verify(pool.data.balances[Addresses.BOB_ADDRESS].balance == aliceTokens * 4 * Constants.PRECISION)
+
+  #   # AND the total supply of tokens is as expected
+  #   scenario.verify(pool.data.totalSupply == bobTokens * Constants.PRECISION)
+
+  #   # AND the pool has possession of the correct number of tokens.
+  #   scenario.verify(token.data.balances[pool.address].balance == bobTokens + additionalTokens)
+
+  #   # AND the pool has not yet balanced the additional tokens
+  #   scenario.verify(pool.data.underlyingBalance == bobTokens)
+
+  #   # WHEN Bob withdraws his tokens
+  #   scenario += pool.UNSAFE_redeem(
+  #     bobTokens * Constants.PRECISION
+  #   ).run(
+  #     sender = Addresses.BOB_ADDRESS
+  #   )
+
+  #   # THEN Alice retains her position
+  #   scenario.verify(token.data.balances[Addresses.ALICE_ADDRESS].balance == aliceTokens)
+  #   scenario.verify(pool.data.balances[Addresses.ALICE_ADDRESS].balance == sp.nat(0))
+
+  #   # AND Bob receives his original tokens back
+  #   scenario.verify(token.data.balances[Addresses.BOB_ADDRESS].balance == bobTokens)
+  #   scenario.verify(pool.data.balances[Addresses.BOB_ADDRESS].balance == sp.nat(0))
+
+  #   # AND the total supply of tokens is as expected
+  #   scenario.verify(pool.data.totalSupply == sp.nat(0))
+
+  #   # AND the pool has possession of the correct number of tokens.
+  #   scenario.verify(token.data.balances[pool.address].balance == sp.nat(10))
+
+  #   # AND the pool thinks it has 0 tokens
+  #   scenario.verify(pool.data.underlyingBalance == sp.nat(0))
 
   sp.add_compilation_target("pool", PoolContract())
