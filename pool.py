@@ -1123,7 +1123,7 @@ if __name__ == "__main__":
 
     # THEN the governor is rotated.
     scenario.verify(pool.data.interestRate == newInterestRate)
-g
+
   ################################################################
   # deposit
   ################################################################
