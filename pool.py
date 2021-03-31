@@ -20,7 +20,6 @@ WAITING_DEPOSIT = 3
 ################################################################
 ################################################################
 
-# TODO(keefertaylor): Consider bringing Kolibri errors into the contracts. 
 Addresses = sp.import_script_from_url("file:./test-helpers/addresses.py")
 
 class PoolContract(Token.FA12):
