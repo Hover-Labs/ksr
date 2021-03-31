@@ -114,7 +114,7 @@ class PoolContract(Token.FA12):
 
       # Internal State
       underlyingBalance = sp.nat(0),
-      lastInterestRateUpdateTime = lastInterestRateUpdateTime,
+      lastInterestCompoundTime = lastInterestCompoundTime,
       
       # State machinge
       state = state,
@@ -402,8 +402,10 @@ class PoolContract(Token.FA12):
     # Update the last updated time.
     self.data.lastInterestCompoundTime = self.data.lastInterestCompoundTime + (numPeriods * Constants.SECONDS_PER_COMPOUND)
 
-    # TODO(keefertaylor): Update appropriately.
-    sp.result(sp.nat(0)
+    # TODO(keefertaylor): Accrue interest.
+    # TODO(keefertaylor): Request funds from stability fund.
+    # TODO(keefertaylor): Subtract appropriate amount of interest.
+    sp.result(sp.nat(0))
 
   # Compound interest via a linear approximation.
   @sp.global_lambda
