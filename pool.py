@@ -1,19 +1,7 @@
 import smartpy as sp
 
+Constants = sp.import_script_from_url("file:common/constants.py")
 Token = sp.import_script_from_url("file:token.py")
-
-################################################################
-################################################################
-# CONSTANTS
-################################################################
-################################################################
-
-# The number of decimals of precision.
-# TODO(keefertaylor): Migrate to constants
-PRECISION = 1000000000000000000 # 18 decimals
-
-# TODO(keefertaylor): Migrate to constants
-SECONDS_PER_COMPOUND = 60
 
 ################################################################
 ################################################################
@@ -172,11 +160,11 @@ class PoolContract(Token.FA12):
 
     # Calculate the tokens to issue.
     tokensToDeposit = sp.local('tokensToDeposit', self.data.savedState_tokensToDeposit.open_some())
-    newTokens = sp.local('newTokens', tokensToDeposit.value * PRECISION)
+    newTokens = sp.local('newTokens', tokensToDeposit.value * Constants.PRECISION)
     sp.if self.data.totalSupply != sp.nat(0):
       newUnderlyingBalance = sp.local('newUnderlyingBalance', updatedBalance + tokensToDeposit.value)
-      fractionOfPoolOwnership = sp.local('fractionOfPoolOwnership', (tokensToDeposit.value * PRECISION) / newUnderlyingBalance.value)
-      newTokens.value = ((fractionOfPoolOwnership.value * self.data.totalSupply) / (sp.as_nat(PRECISION - fractionOfPoolOwnership.value)))
+      fractionOfPoolOwnership = sp.local('fractionOfPoolOwnership', (tokensToDeposit.value * Constants.PRECISION) / newUnderlyingBalance.value)
+      newTokens.value = ((fractionOfPoolOwnership.value * self.data.totalSupply) / (sp.as_nat(Constants.PRECISION - fractionOfPoolOwnership.value)))
 
     # Calculate the newly accrued interest.
     accruedInterest = self.accrueInterest(sp.unit)
@@ -251,8 +239,8 @@ class PoolContract(Token.FA12):
 
     # Calculate tokens to receive.
     tokensToRedeem = sp.local('tokensToRedeem', self.data.savedState_tokensToRedeem.open_some())
-    fractionOfPoolOwnership = sp.local('fractionOfPoolOwnership', (tokensToRedeem.value * PRECISION) / self.data.totalSupply)
-    tokensToReceive = sp.local('tokensToReceive', (fractionOfPoolOwnership.value * updatedBalance) / PRECISION)
+    fractionOfPoolOwnership = sp.local('fractionOfPoolOwnership', (tokensToRedeem.value * Constants.PRECISION) / self.data.totalSupply)
+    tokensToReceive = sp.local('tokensToReceive', (fractionOfPoolOwnership.value * updatedBalance) / Constants.PRECISION)
 
     # Calculate the newly accrued interest.
     accruedInterest = self.accrueInterest(sp.unit)
@@ -307,8 +295,8 @@ class PoolContract(Token.FA12):
     sp.verify(self.data.state == IDLE, "bad state")
 
     # Calculate tokens to receive.
-    fractionOfPoolOwnership = sp.local('fractionOfPoolOwnership', (tokensToRedeem * PRECISION) / self.data.totalSupply)
-    tokensToReceive = sp.local('tokensToReceive', (fractionOfPoolOwnership.value * self.data.underlyingBalance) / PRECISION)
+    fractionOfPoolOwnership = sp.local('fractionOfPoolOwnership', (tokensToRedeem * Constants.PRECISION) / self.data.totalSupply)
+    tokensToReceive = sp.local('tokensToReceive', (fractionOfPoolOwnership.value * self.data.underlyingBalance) / Constants.PRECISION)
 
     # Debit underlying balance by the amount of tokens that will be sent
     self.data.underlyingBalance = sp.as_nat(self.data.underlyingBalance - tokensToReceive.value)
@@ -416,15 +404,15 @@ class PoolContract(Token.FA12):
 
     # Calculate the number of periods that elapsed.
     timeDeltaSeconds = sp.as_nat(sp.now - self.data.lastInterestCompoundTime)
-    numPeriods = sp.local('numPeriods', timeDeltaSeconds // SECONDS_PER_COMPOUND)
+    numPeriods = sp.local('numPeriods', timeDeltaSeconds // Constants.SECONDS_PER_COMPOUND)
 
     # Update the last updated time.
-    self.data.lastInterestCompoundTime = self.data.lastInterestCompoundTime.add_seconds(sp.to_int(numPeriods.value * SECONDS_PER_COMPOUND))
+    self.data.lastInterestCompoundTime = self.data.lastInterestCompoundTime.add_seconds(sp.to_int(numPeriods.value * Constants.SECONDS_PER_COMPOUND))
 
     # Determine the new amount of interest accrued.
     newUnderlyingBalance = sp.local(
       'newTotalUnderlying', 
-      self.data.underlyingBalance * (PRECISION + (numPeriods.value * self.data.interestRate)) // PRECISION
+      self.data.underlyingBalance * (Constants.PRECISION + (numPeriods.value * self.data.interestRate)) // Constants.PRECISION
     )
     accruedInterest = sp.local('accruedInterest', sp.as_nat(newUnderlyingBalance.value - self.data.underlyingBalance))
 
@@ -472,11 +460,11 @@ if __name__ == "__main__":
 
     # WHEN interest is accrued after 1 compound period.
     scenario += pool.DEBUG_accrueInterest(sp.unit).run(
-      now = sp.timestamp(SECONDS_PER_COMPOUND)
+      now = sp.timestamp(Constants.SECONDS_PER_COMPOUND)
     )
 
     # THEN the last interest update time is updated.
-    scenario.verify(pool.data.lastInterestCompoundTime == sp.timestamp(SECONDS_PER_COMPOUND))
+    scenario.verify(pool.data.lastInterestCompoundTime == sp.timestamp(Constants.SECONDS_PER_COMPOUND))
 
   @sp.add_test(name="accrueInterest - updates lastInterestCompoundTime for two periods")
   def test():
@@ -491,11 +479,11 @@ if __name__ == "__main__":
 
     # WHEN interest is accrued after 2 compound periods.
     scenario += pool.DEBUG_accrueInterest(sp.unit).run(
-      now = sp.timestamp(SECONDS_PER_COMPOUND * 2)
+      now = sp.timestamp(Constants.SECONDS_PER_COMPOUND * 2)
     )
 
     # THEN the last interest update time is updated.
-    scenario.verify(pool.data.lastInterestCompoundTime == sp.timestamp(SECONDS_PER_COMPOUND * 2))
+    scenario.verify(pool.data.lastInterestCompoundTime == sp.timestamp(Constants.SECONDS_PER_COMPOUND * 2))
 
   @sp.add_test(name="accrueInterest - updates lastInterestCompoundTime for one period with nonzero start")
   def test():
@@ -504,17 +492,17 @@ if __name__ == "__main__":
 
     pool = PoolContract(
       interestRate = sp.nat(0),
-      lastInterestCompoundTime = sp.timestamp(SECONDS_PER_COMPOUND)
+      lastInterestCompoundTime = sp.timestamp(Constants.SECONDS_PER_COMPOUND)
     )
     scenario += pool
 
     # WHEN interest is accrued after 1 compound period.
     scenario += pool.DEBUG_accrueInterest(sp.unit).run(
-      now = sp.timestamp(SECONDS_PER_COMPOUND * 2)
+      now = sp.timestamp(Constants.SECONDS_PER_COMPOUND * 2)
     )
 
     # THEN the last interest update time is updated.
-    scenario.verify(pool.data.lastInterestCompoundTime == sp.timestamp(SECONDS_PER_COMPOUND * 2))
+    scenario.verify(pool.data.lastInterestCompoundTime == sp.timestamp(Constants.SECONDS_PER_COMPOUND * 2))
 
   @sp.add_test(name="accrueInterest - updates lastInterestCompoundTime by flooring partial periods")
   def test():
@@ -533,14 +521,14 @@ if __name__ == "__main__":
     )
 
     # THEN the last interest update time is floored.
-    scenario.verify(pool.data.lastInterestCompoundTime == sp.timestamp(SECONDS_PER_COMPOUND * 2))    
+    scenario.verify(pool.data.lastInterestCompoundTime == sp.timestamp(Constants.SECONDS_PER_COMPOUND * 2))    
 
   @sp.add_test(name="accrueInterest - calculates accrued interest for one period")
   def test():
     # GIVEN a Pool contract
     scenario = sp.test_scenario()
 
-    initialValue = sp.nat(1 * PRECISION)
+    initialValue = Constants.PRECISION
     pool = PoolContract(
       interestRate = sp.nat(100000000000000000),
       underlyingBalance = initialValue,
@@ -550,7 +538,7 @@ if __name__ == "__main__":
 
     # WHEN interest is accrued after 1 compound period.
     scenario += pool.DEBUG_accrueInterest(sp.unit).run(
-      now = sp.timestamp(SECONDS_PER_COMPOUND)
+      now = sp.timestamp(Constants.SECONDS_PER_COMPOUND)
     )
 
     # THEN the the accrued interest is calculated correctly.
@@ -561,7 +549,7 @@ if __name__ == "__main__":
     # GIVEN a Pool contract
     scenario = sp.test_scenario()
 
-    initialValue = sp.nat(1 * PRECISION)
+    initialValue = Constants.PRECISION
     pool = PoolContract(
       interestRate = sp.nat(100000000000000000),
       underlyingBalance = initialValue,
@@ -571,7 +559,7 @@ if __name__ == "__main__":
 
     # WHEN interest is accrued after 2 compound periods.
     scenario += pool.DEBUG_accrueInterest(sp.unit).run(
-      now = sp.timestamp(SECONDS_PER_COMPOUND * 2)
+      now = sp.timestamp(Constants.SECONDS_PER_COMPOUND * 2)
     )
 
     # THEN the the accrued interest is calculated correctly.
@@ -586,13 +574,13 @@ if __name__ == "__main__":
     pool = PoolContract(
       interestRate = sp.nat(100000000000000000),
       underlyingBalance = initialValue,
-      lastInterestCompoundTime = sp.timestamp(SECONDS_PER_COMPOUND)
+      lastInterestCompoundTime = sp.timestamp(Constants.SECONDS_PER_COMPOUND)
     )
     scenario += pool
 
     # WHEN interest is accrued after 1 compound period.
     scenario += pool.DEBUG_accrueInterest(sp.unit).run(
-      now = sp.timestamp(SECONDS_PER_COMPOUND * 2)
+      now = sp.timestamp(Constants.SECONDS_PER_COMPOUND * 2)
     )
 
     # THEN the the accrued interest is calculated correctly.
@@ -603,7 +591,7 @@ if __name__ == "__main__":
     # GIVEN a Pool contract
     scenario = sp.test_scenario()
 
-    initialValue = sp.nat(1 * PRECISION)
+    initialValue = Constants.PRECISION
     pool = PoolContract(
       interestRate = sp.nat(100000000000000000),
       underlyingBalance = initialValue,
@@ -630,7 +618,7 @@ if __name__ == "__main__":
     scenario += token
 
     # AND a Pool contract
-    initialValue = sp.nat(1 * PRECISION)
+    initialValue = Constants.PRECISION
     pool = PoolContract(
       interestRate = sp.nat(100000000000000000),
       underlyingBalance = initialValue,
@@ -664,7 +652,7 @@ if __name__ == "__main__":
     scenario += token.mint(
       sp.record(
         address = stabilityFund.address,
-        value = sp.nat(1000000 * PRECISION)
+        value = 1000000 * Constants.PRECISION
       )
     ).run(
       sender = Addresses.ADMIN_ADDRESS
@@ -672,7 +660,7 @@ if __name__ == "__main__":
 
     # WHEN interest is accrued after 1 compound period.
     scenario += pool.DEBUG_accrueInterest(sp.unit).run(
-      now = sp.timestamp(SECONDS_PER_COMPOUND)
+      now = sp.timestamp(Constants.SECONDS_PER_COMPOUND)
     )
 
     # THEN the contract has the right number of tokens.
@@ -689,7 +677,7 @@ if __name__ == "__main__":
     scenario += token
 
     # AND a Pool contract
-    initialValue = sp.nat(1 * PRECISION)
+    initialValue = Constants.PRECISION
     pool = PoolContract(
       interestRate = sp.nat(100000000000000000),
       underlyingBalance = initialValue,
@@ -723,7 +711,7 @@ if __name__ == "__main__":
     scenario += token.mint(
       sp.record(
         address = stabilityFund.address,
-        value = sp.nat(1000000 * PRECISION)
+        value = 1000000 * Constants.PRECISION
       )
     ).run(
       sender = Addresses.ADMIN_ADDRESS
@@ -731,7 +719,7 @@ if __name__ == "__main__":
 
     # WHEN interest is accrued after 2 compound periods.
     scenario += pool.DEBUG_accrueInterest(sp.unit).run(
-      now = sp.timestamp(2 * SECONDS_PER_COMPOUND)
+      now = sp.timestamp(2 * Constants.SECONDS_PER_COMPOUND)
     )
 
     # THEN the contract has the right number of tokens.
@@ -752,7 +740,7 @@ if __name__ == "__main__":
     pool = PoolContract(
       interestRate = sp.nat(100000000000000000),
       underlyingBalance = initialValue,
-      lastInterestCompoundTime = sp.timestamp(SECONDS_PER_COMPOUND)
+      lastInterestCompoundTime = sp.timestamp(Constants.SECONDS_PER_COMPOUND)
     )
     scenario += pool
 
@@ -782,7 +770,7 @@ if __name__ == "__main__":
     scenario += token.mint(
       sp.record(
         address = stabilityFund.address,
-        value = sp.nat(1000000 * PRECISION)
+        value = 1000000 * Constants.PRECISION
       )
     ).run(
       sender = Addresses.ADMIN_ADDRESS
@@ -790,7 +778,7 @@ if __name__ == "__main__":
 
     # WHEN interest is accrued after the second compound period.
     scenario += pool.DEBUG_accrueInterest(sp.unit).run(
-      now = sp.timestamp(2 * SECONDS_PER_COMPOUND)
+      now = sp.timestamp(2 * Constants.SECONDS_PER_COMPOUND)
     )
 
     # THEN the contract has the right number of tokens.
@@ -807,7 +795,7 @@ if __name__ == "__main__":
     scenario += token
 
     # AND a Pool contract
-    initialValue = sp.nat(1 * PRECISION)
+    initialValue = Constants.PRECISION
     pool = PoolContract(
       interestRate = sp.nat(100000000000000000),
       underlyingBalance = initialValue,
@@ -841,7 +829,7 @@ if __name__ == "__main__":
     scenario += token.mint(
       sp.record(
         address = stabilityFund.address,
-        value = sp.nat(1000000 * PRECISION)
+        value = 1000000 * Constants.PRECISION
       )
     ).run(
       sender = Addresses.ADMIN_ADDRESS
@@ -1215,10 +1203,10 @@ if __name__ == "__main__":
 
     # THEN Alice trades her tokens for LP tokens
     scenario.verify(token.data.balances[Addresses.ALICE_ADDRESS].balance == sp.nat(0))
-    scenario.verify(pool.data.balances[Addresses.ALICE_ADDRESS].balance == aliceTokens * PRECISION)
+    scenario.verify(pool.data.balances[Addresses.ALICE_ADDRESS].balance == aliceTokens * Constants.PRECISION)
 
     # AND the total supply of tokens is as expected
-    scenario.verify(pool.data.totalSupply == aliceTokens * PRECISION)
+    scenario.verify(pool.data.totalSupply == aliceTokens * Constants.PRECISION)
 
     # AND the pool has possession of the correct number of tokens.
     scenario.verify(token.data.balances[pool.address].balance == aliceTokens)
@@ -1297,14 +1285,14 @@ if __name__ == "__main__":
 
     # THEN Alice trades her tokens for LP tokens
     scenario.verify(token.data.balances[Addresses.ALICE_ADDRESS].balance == sp.nat(0))
-    scenario.verify(pool.data.balances[Addresses.ALICE_ADDRESS].balance == aliceTokens * PRECISION)
+    scenario.verify(pool.data.balances[Addresses.ALICE_ADDRESS].balance == aliceTokens * Constants.PRECISION)
 
     # AND Bob trades his tokens for LP tokens
     scenario.verify(token.data.balances[Addresses.BOB_ADDRESS].balance == sp.nat(0))
-    scenario.verify(pool.data.balances[Addresses.BOB_ADDRESS].balance == aliceTokens * 4  * PRECISION)
+    scenario.verify(pool.data.balances[Addresses.BOB_ADDRESS].balance == aliceTokens * 4  * Constants.PRECISION)
 
     # AND the total supply of tokens is as expected
-    scenario.verify(pool.data.totalSupply == (aliceTokens + bobTokens) * PRECISION)
+    scenario.verify(pool.data.totalSupply == (aliceTokens + bobTokens) * Constants.PRECISION)
 
     # AND the pool has possession of the correct number of tokens.
     scenario.verify(token.data.balances[pool.address].balance == aliceTokens + bobTokens)
@@ -1383,14 +1371,14 @@ if __name__ == "__main__":
 
     # THEN Alice trades her tokens for LP tokens
     scenario.verify(token.data.balances[Addresses.ALICE_ADDRESS].balance == sp.nat(0))
-    scenario.verify(pool.data.balances[Addresses.ALICE_ADDRESS].balance == aliceTokens * PRECISION)
+    scenario.verify(pool.data.balances[Addresses.ALICE_ADDRESS].balance == aliceTokens * Constants.PRECISION)
 
     # AND Bob trades his tokens for LP tokens
     scenario.verify(token.data.balances[Addresses.BOB_ADDRESS].balance == sp.nat(0))
-    scenario.verify(pool.data.balances[Addresses.BOB_ADDRESS].balance == aliceTokens * 4  * PRECISION)
+    scenario.verify(pool.data.balances[Addresses.BOB_ADDRESS].balance == aliceTokens * 4  * Constants.PRECISION)
 
     # AND the total supply of tokens is as expected
-    scenario.verify(pool.data.totalSupply == (aliceTokens + bobTokens) * PRECISION)
+    scenario.verify(pool.data.totalSupply == (aliceTokens + bobTokens) * Constants.PRECISION)
 
     # AND the pool has possession of the correct number of tokens.
     scenario.verify(token.data.balances[pool.address].balance == aliceTokens + bobTokens)
@@ -1507,14 +1495,14 @@ if __name__ == "__main__":
     )
 
     # THEN the contract doubles the number of LP tokens
-    scenario.verify(pool.data.totalSupply == (100 * PRECISION))
+    scenario.verify(pool.data.totalSupply == (100 * Constants.PRECISION))
 
     # AND the pool has the right number of tokens.
     scenario.verify(token.data.balances[pool.address].balance == sp.nat(10 + 40 + 10 + 60))
     scenario.verify(pool.data.underlyingBalance == sp.nat(10 + 40 + 10 + 60))
 
     # AND Charlie has the right number of LP tokens.
-    scenario.verify(pool.data.balances[Addresses.CHARLIE_ADDRESS].balance == 50 * PRECISION)
+    scenario.verify(pool.data.balances[Addresses.CHARLIE_ADDRESS].balance == 50 * Constants.PRECISION)
 
   @sp.add_test(name="deposit - successfully mints LP tokens after additional liquidity is deposited in the pool with a small amount of tokens")
   def test():
@@ -1682,7 +1670,7 @@ if __name__ == "__main__":
     )
 
     # AND the pool has tokens
-    poolTokens = PRECISION * 200
+    poolTokens = Constants.PRECISION * 200
     scenario += token.mint(
       sp.record(
         address = pool.address,
@@ -1746,7 +1734,7 @@ if __name__ == "__main__":
     )
 
     # AND the pool has tokens
-    poolTokens = PRECISION * 200
+    poolTokens = Constants.PRECISION * 200
     scenario += token.mint(
       sp.record(
         address = pool.address,
@@ -1807,7 +1795,7 @@ if __name__ == "__main__":
     )
 
     # AND the pool has tokens
-    poolTokens = PRECISION * 200
+    poolTokens = Constants.PRECISION * 200
     scenario += token.mint(
       sp.record(
         address = pool.address,
@@ -1862,7 +1850,7 @@ if __name__ == "__main__":
     scenario += pool.mint(
       sp.record(
         address = Addresses.ALICE_ADDRESS,
-        value = aliceTokens * PRECISION
+        value = aliceTokens * Constants.PRECISION
       )
     ).run(
       sender = pool.address
@@ -1871,7 +1859,7 @@ if __name__ == "__main__":
     # WHEN Alice withdraws from the contract
     # THEN the call fails.
     scenario += pool.redeem(
-      aliceTokens * PRECISION
+      aliceTokens * Constants.PRECISION
     ).run(
       sender = Addresses.ALICE_ADDRESS,
       valid = False
@@ -1923,7 +1911,7 @@ if __name__ == "__main__":
 
     # WHEN Alice withdraws from the contract.
     scenario += pool.redeem(
-      aliceTokens * PRECISION
+      aliceTokens * Constants.PRECISION
     ).run(
       sender = Addresses.ALICE_ADDRESS
     )
@@ -1979,7 +1967,7 @@ if __name__ == "__main__":
 
     # WHEN Alice withdraws from the contract.
     scenario += pool.redeem(
-      aliceTokens * PRECISION
+      aliceTokens * Constants.PRECISION
     ).run(
       sender = Addresses.ALICE_ADDRESS
     )
@@ -2068,7 +2056,7 @@ if __name__ == "__main__":
 
     # WHEN Alice withdraws her tokens
     scenario += pool.redeem(
-      aliceTokens * PRECISION
+      aliceTokens * Constants.PRECISION
     ).run(
       sender = Addresses.ALICE_ADDRESS
     )
@@ -2079,10 +2067,10 @@ if __name__ == "__main__":
 
     # AND Bob still has his position
     scenario.verify(token.data.balances[Addresses.BOB_ADDRESS].balance == sp.nat(0))
-    scenario.verify(pool.data.balances[Addresses.BOB_ADDRESS].balance == aliceTokens * 4 * PRECISION)
+    scenario.verify(pool.data.balances[Addresses.BOB_ADDRESS].balance == aliceTokens * 4 * Constants.PRECISION)
 
     # AND the total supply of tokens is as expected
-    scenario.verify(pool.data.totalSupply == bobTokens * PRECISION)
+    scenario.verify(pool.data.totalSupply == bobTokens * Constants.PRECISION)
 
     # AND the pool has possession of the correct number of tokens.
     scenario.verify(token.data.balances[pool.address].balance == bobTokens)
@@ -2090,7 +2078,7 @@ if __name__ == "__main__":
 
     # WHEN Bob withdraws his tokens
     scenario += pool.redeem(
-      bobTokens * PRECISION
+      bobTokens * Constants.PRECISION
     ).run(
       sender = Addresses.BOB_ADDRESS
     )
@@ -2183,21 +2171,21 @@ if __name__ == "__main__":
 
     # WHEN Bob withdraws his tokens
     scenario += pool.redeem(
-      bobTokens * PRECISION
+      bobTokens * Constants.PRECISION
     ).run(
       sender = Addresses.BOB_ADDRESS
     )
 
     # THEN Alice retains her position
     scenario.verify(token.data.balances[Addresses.ALICE_ADDRESS].balance == sp.nat(0))
-    scenario.verify(pool.data.balances[Addresses.ALICE_ADDRESS].balance == aliceTokens * PRECISION)
+    scenario.verify(pool.data.balances[Addresses.ALICE_ADDRESS].balance == aliceTokens * Constants.PRECISION)
 
     # AND Bob receives his original tokens back and the LP tokens are burn.
     scenario.verify(token.data.balances[Addresses.BOB_ADDRESS].balance == bobTokens)
     scenario.verify(pool.data.balances[Addresses.BOB_ADDRESS].balance == sp.nat(0))
 
     # AND the total supply of tokens is as expected
-    scenario.verify(pool.data.totalSupply == aliceTokens * PRECISION)
+    scenario.verify(pool.data.totalSupply == aliceTokens * Constants.PRECISION)
 
     # AND the pool has possession of the correct number of tokens.
     scenario.verify(token.data.balances[pool.address].balance == aliceTokens)
@@ -2205,7 +2193,7 @@ if __name__ == "__main__":
 
     # WHEN Alice withdraws her tokens
     scenario += pool.redeem(
-      aliceTokens * PRECISION
+      aliceTokens * Constants.PRECISION
     ).run(
       sender = Addresses.ALICE_ADDRESS
     )
@@ -2298,21 +2286,21 @@ if __name__ == "__main__":
 
     # WHEN Alice withdraws half of her tokens
     scenario += pool.redeem(
-      aliceTokens / 2 * PRECISION
+      aliceTokens / 2 * Constants.PRECISION
     ).run(
       sender = Addresses.ALICE_ADDRESS
     )
 
     # THEN Alice receives her original tokens back and the LP tokens are burnt
     scenario.verify(token.data.balances[Addresses.ALICE_ADDRESS].balance == aliceTokens / 2)
-    scenario.verify(pool.data.balances[Addresses.ALICE_ADDRESS].balance == aliceTokens / 2 * PRECISION)
+    scenario.verify(pool.data.balances[Addresses.ALICE_ADDRESS].balance == aliceTokens / 2 * Constants.PRECISION)
 
     # AND Bob still has his position
     scenario.verify(token.data.balances[Addresses.BOB_ADDRESS].balance == sp.nat(0))
-    scenario.verify(pool.data.balances[Addresses.BOB_ADDRESS].balance == aliceTokens * 4 * PRECISION)
+    scenario.verify(pool.data.balances[Addresses.BOB_ADDRESS].balance == aliceTokens * 4 * Constants.PRECISION)
 
     # AND the total supply of tokens is as expected
-    scenario.verify(pool.data.totalSupply == (bobTokens + (aliceTokens / 2)) * PRECISION)
+    scenario.verify(pool.data.totalSupply == (bobTokens + (aliceTokens / 2)) * Constants.PRECISION)
 
     # AND the pool has possession of the correct number of tokens.
     scenario.verify(token.data.balances[pool.address].balance == bobTokens + (aliceTokens / 2))
@@ -2320,22 +2308,22 @@ if __name__ == "__main__":
 
     # WHEN Bob withdraws a quarter of his tokens
     scenario += pool.redeem(
-      bobTokens / 4 * PRECISION
+      bobTokens / 4 * Constants.PRECISION
     ).run(
       sender = Addresses.BOB_ADDRESS
     )
 
     # THEN Alice retains her position
     scenario.verify(token.data.balances[Addresses.ALICE_ADDRESS].balance == aliceTokens / 2)
-    scenario.verify(pool.data.balances[Addresses.ALICE_ADDRESS].balance == aliceTokens / 2 * PRECISION)
+    scenario.verify(pool.data.balances[Addresses.ALICE_ADDRESS].balance == aliceTokens / 2 * Constants.PRECISION)
 
     # AND Bob receives his original tokens back and the LP tokens are burn.
     scenario.verify(token.data.balances[Addresses.BOB_ADDRESS].balance == 9) # Bob withdraws 22% (10/45) of the pool, which is 9.9999 tokens. Integer math truncates the remainder
-    scenario.verify(pool.data.balances[Addresses.BOB_ADDRESS].balance == 30 * PRECISION) # Bob withdrew 1/4 of tokens = .25 * 40 = 30
+    scenario.verify(pool.data.balances[Addresses.BOB_ADDRESS].balance == 30 * Constants.PRECISION) # Bob withdrew 1/4 of tokens = .25 * 40 = 30
 
     # AND the total supply of tokens is as expected
     # Expected = 50 tokens generated - 5 tokens alice redeemed - 10 tokens bob redeemed
-    scenario.verify(pool.data.totalSupply == sp.nat(35) * PRECISION)
+    scenario.verify(pool.data.totalSupply == sp.nat(35) * Constants.PRECISION)
 
     # AND the pool has possession of the correct number of tokens.
     # Expected:
@@ -2428,7 +2416,7 @@ if __name__ == "__main__":
 
     # WHEN Alice withdraws her tokens
     scenario += pool.redeem(
-      aliceTokens * PRECISION
+      aliceTokens * Constants.PRECISION
     ).run(
       sender = Addresses.ALICE_ADDRESS
     )
@@ -2441,10 +2429,10 @@ if __name__ == "__main__":
 
     # AND Bob still has his position
     scenario.verify(token.data.balances[Addresses.BOB_ADDRESS].balance == sp.nat(0))
-    scenario.verify(pool.data.balances[Addresses.BOB_ADDRESS].balance == aliceTokens * 4 * PRECISION)
+    scenario.verify(pool.data.balances[Addresses.BOB_ADDRESS].balance == aliceTokens * 4 * Constants.PRECISION)
 
     # AND the total supply of tokens is as expected
-    scenario.verify(pool.data.totalSupply == bobTokens * PRECISION)
+    scenario.verify(pool.data.totalSupply == bobTokens * Constants.PRECISION)
 
     # AND the pool has possession of the correct number of tokens.
     # 10 tokens were added to the pool - 2 tokens alice withdrew = 8 additional tokens remaining.
@@ -2453,7 +2441,7 @@ if __name__ == "__main__":
 
     # WHEN Bob withdraws his tokens
     scenario += pool.redeem(
-      bobTokens * PRECISION
+      bobTokens * Constants.PRECISION
     ).run(
       sender = Addresses.BOB_ADDRESS
     )
@@ -2587,13 +2575,13 @@ if __name__ == "__main__":
 
     # WHEN everyone withdraws their tokens
     scenario += pool.redeem(
-      aliceTokens * PRECISION
+      aliceTokens * Constants.PRECISION
     ).run(
       sender = Addresses.ALICE_ADDRESS
     )
 
     scenario += pool.redeem(
-      bobTokens * PRECISION
+      bobTokens * Constants.PRECISION
     ).run(
       sender = Addresses.BOB_ADDRESS
     )
@@ -2732,13 +2720,13 @@ if __name__ == "__main__":
 
     # WHEN everyone withdraws their tokens
     scenario += pool.redeem(
-      aliceTokens * PRECISION
+      aliceTokens * Constants.PRECISION
     ).run(
       sender = Addresses.ALICE_ADDRESS
     )
 
     scenario += pool.redeem(
-      bobTokens * PRECISION
+      bobTokens * Constants.PRECISION
     ).run(
       sender = Addresses.BOB_ADDRESS
     )
@@ -2794,7 +2782,7 @@ if __name__ == "__main__":
     pool = PoolContract(
       state = WAITING_REDEEM,
       savedState_redeemer = sp.some(Addresses.ALICE_ADDRESS),
-      savedState_tokensToRedeem = sp.some(aliceTokens * PRECISION),
+      savedState_tokensToRedeem = sp.some(aliceTokens * Constants.PRECISION),
 
       tokenAddress = token.address
     )
@@ -2804,14 +2792,14 @@ if __name__ == "__main__":
     scenario += pool.mint(
       sp.record(
         address = Addresses.ALICE_ADDRESS,
-        value = aliceTokens * PRECISION
+        value = aliceTokens * Constants.PRECISION
       )
     ).run(
       sender = pool.address
     )
 
     # AND the pool has tokens
-    poolTokens = PRECISION * 200
+    poolTokens = Constants.PRECISION * 200
     scenario += token.mint(
       sp.record(
         address = pool.address,
@@ -2868,14 +2856,14 @@ if __name__ == "__main__":
     scenario += pool.mint(
       sp.record(
         address = Addresses.ALICE_ADDRESS,
-        value = aliceTokens * PRECISION
+        value = aliceTokens * Constants.PRECISION
       )
     ).run(
       sender = pool.address
     )
 
     # AND the pool has tokens
-    poolTokens = PRECISION * 200
+    poolTokens = Constants.PRECISION * 200
     scenario += token.mint(
       sp.record(
         address = pool.address,
@@ -2919,7 +2907,7 @@ if __name__ == "__main__":
     pool = PoolContract(
       state = WAITING_REDEEM,
       savedState_redeemer = sp.some(Addresses.ALICE_ADDRESS),
-      savedState_tokensToRedeem = sp.some(aliceTokens * PRECISION),
+      savedState_tokensToRedeem = sp.some(aliceTokens * Constants.PRECISION),
 
       tokenAddress = token.address
     )
@@ -2929,14 +2917,14 @@ if __name__ == "__main__":
     scenario += pool.mint(
       sp.record(
         address = Addresses.ALICE_ADDRESS,
-        value = aliceTokens * PRECISION
+        value = aliceTokens * Constants.PRECISION
       )
     ).run(
       sender = pool.address
     )
 
     # AND the pool has tokens
-    poolTokens = PRECISION * 200
+    poolTokens = Constants.PRECISION * 200
     scenario += token.mint(
       sp.record(
         address = pool.address,
@@ -2991,7 +2979,7 @@ if __name__ == "__main__":
     scenario += pool.mint(
       sp.record(
         address = Addresses.ALICE_ADDRESS,
-        value = aliceTokens * PRECISION
+        value = aliceTokens * Constants.PRECISION
       )
     ).run(
       sender = pool.address
@@ -3000,7 +2988,7 @@ if __name__ == "__main__":
     # WHEN Alice withdraws from the contract
     # THEN the call fails.
     scenario += pool.UNSAFE_redeem(
-      aliceTokens * PRECISION
+      aliceTokens * Constants.PRECISION
     ).run(
       sender = Addresses.ALICE_ADDRESS,
       valid = False
@@ -3052,7 +3040,7 @@ if __name__ == "__main__":
 
     # WHEN Alice withdraws from the contract.
     scenario += pool.UNSAFE_redeem(
-      aliceTokens * PRECISION
+      aliceTokens * Constants.PRECISION
     ).run(
       sender = Addresses.ALICE_ADDRESS
     )
@@ -3141,7 +3129,7 @@ if __name__ == "__main__":
 
     # WHEN Alice withdraws her tokens
     scenario += pool.UNSAFE_redeem(
-      aliceTokens * PRECISION
+      aliceTokens * Constants.PRECISION
     ).run(
       sender = Addresses.ALICE_ADDRESS
     )
@@ -3152,10 +3140,10 @@ if __name__ == "__main__":
 
     # AND Bob still has his position
     scenario.verify(token.data.balances[Addresses.BOB_ADDRESS].balance == sp.nat(0))
-    scenario.verify(pool.data.balances[Addresses.BOB_ADDRESS].balance == aliceTokens * 4 * PRECISION)
+    scenario.verify(pool.data.balances[Addresses.BOB_ADDRESS].balance == aliceTokens * 4 * Constants.PRECISION)
 
     # AND the total supply of tokens is as expected
-    scenario.verify(pool.data.totalSupply == bobTokens * PRECISION)
+    scenario.verify(pool.data.totalSupply == bobTokens * Constants.PRECISION)
 
     # AND the pool has possession of the correct number of tokens.
     scenario.verify(token.data.balances[pool.address].balance == bobTokens)
@@ -3163,7 +3151,7 @@ if __name__ == "__main__":
 
     # WHEN Bob withdraws his tokens
     scenario += pool.UNSAFE_redeem(
-      bobTokens * PRECISION
+      bobTokens * Constants.PRECISION
     ).run(
       sender = Addresses.BOB_ADDRESS
     )
@@ -3256,21 +3244,21 @@ if __name__ == "__main__":
 
     # WHEN Bob withdraws his tokens
     scenario += pool.UNSAFE_redeem(
-      bobTokens * PRECISION
+      bobTokens * Constants.PRECISION
     ).run(
       sender = Addresses.BOB_ADDRESS
     )
 
     # THEN Alice retains her position
     scenario.verify(token.data.balances[Addresses.ALICE_ADDRESS].balance == sp.nat(0))
-    scenario.verify(pool.data.balances[Addresses.ALICE_ADDRESS].balance == aliceTokens * PRECISION)
+    scenario.verify(pool.data.balances[Addresses.ALICE_ADDRESS].balance == aliceTokens * Constants.PRECISION)
 
     # AND Bob receives his original tokens back and the LP tokens are burn.
     scenario.verify(token.data.balances[Addresses.BOB_ADDRESS].balance == bobTokens)
     scenario.verify(pool.data.balances[Addresses.BOB_ADDRESS].balance == sp.nat(0))
 
     # AND the total supply of tokens is as expected
-    scenario.verify(pool.data.totalSupply == aliceTokens * PRECISION)
+    scenario.verify(pool.data.totalSupply == aliceTokens * Constants.PRECISION)
 
     # AND the pool has possession of the correct number of tokens.
     scenario.verify(token.data.balances[pool.address].balance == aliceTokens)
@@ -3278,7 +3266,7 @@ if __name__ == "__main__":
 
     # WHEN Alice withdraws her tokens
     scenario += pool.UNSAFE_redeem(
-      aliceTokens * PRECISION
+      aliceTokens * Constants.PRECISION
     ).run(
       sender = Addresses.ALICE_ADDRESS
     )
@@ -3371,21 +3359,21 @@ if __name__ == "__main__":
 
     # WHEN Alice withdraws half of her tokens
     scenario += pool.UNSAFE_redeem(
-      aliceTokens / 2 * PRECISION
+      aliceTokens / 2 * Constants.PRECISION
     ).run(
       sender = Addresses.ALICE_ADDRESS
     )
 
     # THEN Alice receives her original tokens back and the LP tokens are burnt
     scenario.verify(token.data.balances[Addresses.ALICE_ADDRESS].balance == aliceTokens / 2)
-    scenario.verify(pool.data.balances[Addresses.ALICE_ADDRESS].balance == aliceTokens / 2 * PRECISION)
+    scenario.verify(pool.data.balances[Addresses.ALICE_ADDRESS].balance == aliceTokens / 2 * Constants.PRECISION)
 
     # AND Bob still has his position
     scenario.verify(token.data.balances[Addresses.BOB_ADDRESS].balance == sp.nat(0))
-    scenario.verify(pool.data.balances[Addresses.BOB_ADDRESS].balance == aliceTokens * 4 * PRECISION)
+    scenario.verify(pool.data.balances[Addresses.BOB_ADDRESS].balance == aliceTokens * 4 * Constants.PRECISION)
 
     # AND the total supply of tokens is as expected
-    scenario.verify(pool.data.totalSupply == (bobTokens + (aliceTokens / 2)) * PRECISION)
+    scenario.verify(pool.data.totalSupply == (bobTokens + (aliceTokens / 2)) * Constants.PRECISION)
 
     # AND the pool has possession of the correct number of tokens.
     scenario.verify(token.data.balances[pool.address].balance == bobTokens + (aliceTokens / 2))
@@ -3393,22 +3381,22 @@ if __name__ == "__main__":
 
     # WHEN Bob withdraws a quarter of his tokens
     scenario += pool.UNSAFE_redeem(
-      bobTokens / 4 * PRECISION
+      bobTokens / 4 * Constants.PRECISION
     ).run(
       sender = Addresses.BOB_ADDRESS
     )
 
     # THEN Alice retains her position
     scenario.verify(token.data.balances[Addresses.ALICE_ADDRESS].balance == aliceTokens / 2)
-    scenario.verify(pool.data.balances[Addresses.ALICE_ADDRESS].balance == aliceTokens / 2 * PRECISION)
+    scenario.verify(pool.data.balances[Addresses.ALICE_ADDRESS].balance == aliceTokens / 2 * Constants.PRECISION)
 
     # AND Bob receives his original tokens back and the LP tokens are burn.
     scenario.verify(token.data.balances[Addresses.BOB_ADDRESS].balance == 9) # Bob withdraws 22% (10/45) of the pool, which is 9.9999 tokens. Integer math truncates the remainder
-    scenario.verify(pool.data.balances[Addresses.BOB_ADDRESS].balance == 30 * PRECISION) # Bob withdrew 1/4 of tokens = .25 * 40 = 30
+    scenario.verify(pool.data.balances[Addresses.BOB_ADDRESS].balance == 30 * Constants.PRECISION) # Bob withdrew 1/4 of tokens = .25 * 40 = 30
 
     # AND the total supply of tokens is as expected
     # Expected = 50 tokens generated - 5 tokens alice redeemed - 10 tokens bob redeemed
-    scenario.verify(pool.data.totalSupply == sp.nat(35) * PRECISION)
+    scenario.verify(pool.data.totalSupply == sp.nat(35) * Constants.PRECISION)
 
     # AND the pool has possession of the correct number of tokens.
     # Expected:
@@ -3501,7 +3489,7 @@ if __name__ == "__main__":
 
     # WHEN Alice withdraws her tokens
     scenario += pool.UNSAFE_redeem(
-      aliceTokens * PRECISION
+      aliceTokens * Constants.PRECISION
     ).run(
       sender = Addresses.ALICE_ADDRESS
     )
@@ -3512,10 +3500,10 @@ if __name__ == "__main__":
 
     # AND Bob still has his position
     scenario.verify(token.data.balances[Addresses.BOB_ADDRESS].balance == sp.nat(0))
-    scenario.verify(pool.data.balances[Addresses.BOB_ADDRESS].balance == aliceTokens * 4 * PRECISION)
+    scenario.verify(pool.data.balances[Addresses.BOB_ADDRESS].balance == aliceTokens * 4 * Constants.PRECISION)
 
     # AND the total supply of tokens is as expected
-    scenario.verify(pool.data.totalSupply == bobTokens * PRECISION)
+    scenario.verify(pool.data.totalSupply == bobTokens * Constants.PRECISION)
 
     # AND the pool has possession of the correct number of tokens.
     scenario.verify(token.data.balances[pool.address].balance == bobTokens + additionalTokens)
@@ -3525,7 +3513,7 @@ if __name__ == "__main__":
 
     # WHEN Bob withdraws his tokens
     scenario += pool.UNSAFE_redeem(
-      bobTokens * PRECISION
+      bobTokens * Constants.PRECISION
     ).run(
       sender = Addresses.BOB_ADDRESS
     )
