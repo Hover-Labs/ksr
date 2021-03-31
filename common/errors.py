@@ -80,5 +80,4 @@ TOKEN_UNSAFE_ALLOWANCE_CHANGE = 23
 TOKEN_NOT_ADMINISTRATOR = 24
 
 # The caller was not the savings account.
-# TODO(keefertaylor): port this up into Kolibri.js
 NOT_SAVINGS_ACCOUNT = 25
