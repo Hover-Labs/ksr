@@ -349,11 +349,7 @@ class PoolContract(Token.FA12):
 
     sp.verify(sp.sender == self.data.governorAddress, "not governor")
 
-    # Accrue interest.
-    accruedInterest = self.accrueInterest(sp.unit) 
-    self.data.underlyingBalance = self.data.underlyingBalance + accruedInterest
-
-    # Adjust rate
+    # TODO(keefertaylor): Process an interest accrual here.
     self.data.interestRate = newInterestRate   
 
   # Update contract metadata
@@ -1210,71 +1206,7 @@ if __name__ == "__main__":
       valid = False
     )
 
-  @sp.add_test(name="updateInterestRate - accrues interest on update")
-  def test():
-    scenario = sp.test_scenario()
-
-    # GIVEN a token contract.
-    token = FA12.FA12(
-      admin = Addresses.ADMIN_ADDRESS
-    )
-    scenario += token
-
-    # AND a Pool contract
-    initialValue = Constants.PRECISION
-    pool = PoolContract(
-      interestRate = sp.nat(100000000000000000),
-      underlyingBalance = initialValue,
-      lastInterestCompoundTime = sp.timestamp(0)
-    )
-    scenario += pool
-
-    # AND a stability fund contract.
-    stabilityFund = StabilityFund.StabilityFundContract(
-      savingsAccountContractAddress = pool.address,
-      tokenContractAddress = token.address,
-    )
-    scenario += stabilityFund
-
-    # AND the pool contract is wired to the stability fund.
-    scenario += pool.updateStabilityFundAddress(stabilityFund.address).run(
-      sender = Addresses.GOVERNOR_ADDRESS
-    )
-
-    # AND the pool has the initial underlying balance.
-    scenario += token.mint(
-      sp.record(
-        address = pool.address,
-        value = initialValue
-      )
-    ).run(
-      sender = Addresses.ADMIN_ADDRESS
-    )
-
-    # AND the stability fund has many tokens
-    scenario += token.mint(
-      sp.record(
-        address = stabilityFund.address,
-        value = 1000000 * Constants.PRECISION
-      )
-    ).run(
-      sender = Addresses.ADMIN_ADDRESS
-    )
-
-    # WHEN the interest rate is adjusted after one period
-    newInterestRate = sp.nat(123)
-    scenario += pool.updateInterestRate(newInterestRate).run(
-      sender = Addresses.GOVERNOR_ADDRESS,
-      now = sp.timestamp(Constants.SECONDS_PER_COMPOUND)
-    )
-
-    # THEN the contract has the right number of tokens.
-    scenario.verify(token.data.balances[pool.address].balance == 1100000000000000000)
-
-    # AND the underlying balance was updated correctly.
-    scenario.verify(pool.data.underlyingBalance == 1100000000000000000)
-
-  @sp.add_test(name="updateInterestRate - updates rate")
+  @sp.add_test(name="updateInterestRate - can rotate governor")
   def test():
     scenario = sp.test_scenario()
 
@@ -1288,7 +1220,7 @@ if __name__ == "__main__":
       sender = Addresses.GOVERNOR_ADDRESS,
     )    
 
-    # THEN the interest rate is updated.
+    # THEN the governor is rotated.
     scenario.verify(pool.data.interestRate == newInterestRate)
 
   ################################################################
