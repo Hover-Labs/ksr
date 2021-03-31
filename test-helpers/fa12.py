@@ -9,6 +9,8 @@ class FA12_core(sp.Contract):
 
     @sp.entry_point
     def transfer(self, params):
+        sp.trace("Transfer!")
+
         sp.set_type(params, sp.TRecord(from_ = sp.TAddress, to_ = sp.TAddress, value = sp.TNat).layout(("from_ as from", ("to_ as to", "value"))))
         sp.verify(self.is_administrator(sp.sender) |
             (~self.is_paused() &
