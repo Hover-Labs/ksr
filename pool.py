@@ -439,18 +439,6 @@ class PoolContract(Token.FA12):
     # Return the number of newly accrued tokens.
     sp.result(accruedInterest.value)
 
-  # Compound interest via a linear approximation.
-  # TODO(keefertaylor): Remove
-  @sp.global_lambda
-  def compoundWithLinearApproximation(params):
-    sp.set_type(params, sp.TRecord(
-      initialValue = sp.TNat,
-      interestRate = sp.TNat,
-      numPeriods = sp.TNat,
-    ).layout(("initialValue", ("interestRate", "numPeriods"))))
-
-    sp.result((params.initialValue * (PRECISION + (params.numPeriods * params.interestRate))) // PRECISION)
-
 ################################################################
 ################################################################
 # TESTS
@@ -866,66 +854,6 @@ if __name__ == "__main__":
 
     # THEN the contract has the right number of tokens.
     scenario.verify(token.data.balances[pool.address].balance == 1200000000000000000)    
-
-  ################################################################
-  # Test Helpers
-  ################################################################
-
-  # A Tester flass that wraps a lambda function to allow for unit testing.
-  # See: https://smartpy.io/releases/20201220-f9f4ad18bd6ec2293f22b8c8812fefbde46d6b7d/ide?template=test_global_lambda.py
-  class Tester(sp.Contract):
-    def __init__(self, lambdaFunc):
-      self.lambdaFunc = sp.inline_result(lambdaFunc.f)
-      self.init(lambdaResult = sp.none)
-
-    @sp.entry_point
-    def test(self, params):
-      self.data.lambdaResult = sp.some(self.lambdaFunc(params))
-
-    @sp.entry_point
-    def check(self, params, result):
-      sp.verify(self.lambdaFunc(params) == result)
-
-  ################################################################
-  # compoundWithLinearApproximation
-  ################################################################
-      
-  @sp.add_test(name="compoundWithLinearApproximation")
-  def test():
-    scenario = sp.test_scenario()
-    pool = PoolContract()
-    scenario += pool
-
-    tester = Tester(pool.compoundWithLinearApproximation)
-    scenario += tester
-
-    # Two periods back to back
-    scenario += tester.check(
-      params = sp.record(
-        initialValue = 1 * PRECISION,
-        interestRate = 100000000000000000,
-        numPeriods = 1
-      ), 
-      result = sp.nat(1100000000000000000)
-    )
-    scenario += tester.check(
-      params = sp.record(
-        initialValue = 1100000000000000000,
-        interestRate = 100000000000000000, 
-        numPeriods = 1
-      ), 
-      result = 1210000000000000000
-    )
-
-    # Two periods in one update
-    scenario += tester.check(
-      params = sp.record(
-        initialValue = 1 * PRECISION,
-        interestRate = 100000000000000000, 
-        numPeriods = 2
-      ), 
-      result = 1200000000000000000
-    )
 
   ################################################################
   # updateContractMetadata
