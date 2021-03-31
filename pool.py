@@ -353,13 +353,8 @@ class PoolContract(Token.FA12):
     sp.verify(sp.sender == self.data.governorAddress, "not governor")
 
     # Accrue interest.
-    self.accrueInterest(sp.unit) 
-
-    # TODO(keefertaylor): We need to consider updating underlying balance here. 
-    # A few options:
-    # 1) capture return value and update it
-    # 2) modify underlying bqlance in sub_entry_point by passing in previous value as a param
-    # 3) do nothing - it doesn't matter.
+    accruedInterest = self.accrueInterest(sp.unit) 
+    self.data.underlyingBalance = self.data.underlyingBalance + accruedInterest
 
     # Adjust rate
     self.data.interestRate = newInterestRate   
@@ -1109,7 +1104,8 @@ if __name__ == "__main__":
     # THEN the contract has the right number of tokens.
     scenario.verify(token.data.balances[pool.address].balance == 1100000000000000000)
 
-    # TODO(keefertaylor): Make sure underlyingBalance got updated correctly.
+    # AND the underlying balance was updated correctly.
+    scenario.verify(pool.data.underlyingBalance == 1100000000000000000)
 
   @sp.add_test(name="updateInterestRate - accrues interest")
   def test():
