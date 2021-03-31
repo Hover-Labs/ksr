@@ -528,7 +528,7 @@ if __name__ == "__main__":
     # GIVEN a Pool contract
     scenario = sp.test_scenario()
 
-    initialValue = sp.nat(1 * Constants.PRECISION)
+    initialValue = Constants.PRECISION
     pool = PoolContract(
       interestRate = sp.nat(100000000000000000),
       underlyingBalance = initialValue,
@@ -549,7 +549,7 @@ if __name__ == "__main__":
     # GIVEN a Pool contract
     scenario = sp.test_scenario()
 
-    initialValue = sp.nat(1 * Constants.PRECISION)
+    initialValue = Constants.PRECISION
     pool = PoolContract(
       interestRate = sp.nat(100000000000000000),
       underlyingBalance = initialValue,
@@ -591,7 +591,7 @@ if __name__ == "__main__":
     # GIVEN a Pool contract
     scenario = sp.test_scenario()
 
-    initialValue = sp.nat(1 * Constants.PRECISION)
+    initialValue = Constants.PRECISION
     pool = PoolContract(
       interestRate = sp.nat(100000000000000000),
       underlyingBalance = initialValue,
@@ -618,7 +618,7 @@ if __name__ == "__main__":
     scenario += token
 
     # AND a Pool contract
-    initialValue = sp.nat(1 * Constants.PRECISION)
+    initialValue = Constants.PRECISION
     pool = PoolContract(
       interestRate = sp.nat(100000000000000000),
       underlyingBalance = initialValue,
@@ -652,7 +652,7 @@ if __name__ == "__main__":
     scenario += token.mint(
       sp.record(
         address = stabilityFund.address,
-        value = sp.nat(1000000 * Constants.PRECISION)
+        value = 1000000 * Constants.PRECISION
       )
     ).run(
       sender = Addresses.ADMIN_ADDRESS
@@ -677,7 +677,7 @@ if __name__ == "__main__":
     scenario += token
 
     # AND a Pool contract
-    initialValue = sp.nat(1 * Constants.PRECISION)
+    initialValue = Constants.PRECISION
     pool = PoolContract(
       interestRate = sp.nat(100000000000000000),
       underlyingBalance = initialValue,
@@ -711,7 +711,7 @@ if __name__ == "__main__":
     scenario += token.mint(
       sp.record(
         address = stabilityFund.address,
-        value = sp.nat(1000000 * Constants.PRECISION)
+        value = 1000000 * Constants.PRECISION
       )
     ).run(
       sender = Addresses.ADMIN_ADDRESS
@@ -770,7 +770,7 @@ if __name__ == "__main__":
     scenario += token.mint(
       sp.record(
         address = stabilityFund.address,
-        value = sp.nat(1000000 * Constants.PRECISION)
+        value = 1000000 * Constants.PRECISION
       )
     ).run(
       sender = Addresses.ADMIN_ADDRESS
@@ -795,7 +795,7 @@ if __name__ == "__main__":
     scenario += token
 
     # AND a Pool contract
-    initialValue = sp.nat(1 * Constants.PRECISION)
+    initialValue = Constants.PRECISION
     pool = PoolContract(
       interestRate = sp.nat(100000000000000000),
       underlyingBalance = initialValue,
@@ -829,7 +829,7 @@ if __name__ == "__main__":
     scenario += token.mint(
       sp.record(
         address = stabilityFund.address,
-        value = sp.nat(1000000 * Constants.PRECISION)
+        value = 1000000 * Constants.PRECISION
       )
     ).run(
       sender = Addresses.ADMIN_ADDRESS
