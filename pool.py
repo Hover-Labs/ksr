@@ -1,6 +1,6 @@
 import smartpy as sp
 
-Token= sp.import_script_from_url("file:token.py")
+Token = sp.import_script_from_url("file:token.py")
 
 ################################################################
 ################################################################
@@ -11,6 +11,9 @@ Token= sp.import_script_from_url("file:token.py")
 # The number of decimals of precision.
 # TODO(keefertaylor): Migrate to constants
 PRECISION = 1000000000000000000 # 18 decimals
+
+# TODO(keefertaylor): Migrate to constants
+SECONDS_PER_COMPOUND = 60
 
 ################################################################
 ################################################################
@@ -122,6 +125,9 @@ class PoolContract(Token.FA12):
       savedState_redeemer = savedState_redeemer, # Account redeeming tokens, populated when state = WAITING_REDEEM
       savedState_tokensToDeposit = savedState_tokensToDeposit, # Amount of tokens to deposit, populated when state = WAITING_DEPOSIT
       savedState_depositor = savedState_depositor, # Account depositing the tokens, populated when state = WAITING_DEPOSIT
+
+        # Debugging
+      debug_accrueInterest = sp.none,
     )
 
   ################################################################
@@ -382,6 +388,10 @@ class PoolContract(Token.FA12):
   # Helpers
   ################################################################
 
+  @sp.entry_point
+  def DEBUG_accrueInterest(self, unit): 
+    self.data.debug_accrueInterest = sp.some(self.accrueInterest(sp.unit))
+
   # Helper function to:
   # - Calculate elapsed periods
   # - Accrue interest using linear approximation
@@ -397,11 +407,11 @@ class PoolContract(Token.FA12):
 
     # Calculate the number of periods that elapsed.
     timeDeltaSeconds = sp.as_nat(sp.now - self.data.lastInterestCompoundTime)
-    numPeriods = timeDeltaSeconds // Constants.SECONDS_PER_COMPOUND
+    numPeriods = timeDeltaSeconds // SECONDS_PER_COMPOUND
 
     # Update the last updated time.
-    self.data.lastInterestCompoundTime = self.data.lastInterestCompoundTime + (numPeriods * Constants.SECONDS_PER_COMPOUND)
-
+    self.data.lastInterestCompoundTime = self.data.lastInterestCompoundTime.add_seconds(sp.to_int(numPeriods * SECONDS_PER_COMPOUND))
+    
     # TODO(keefertaylor): Accrue interest.
     # TODO(keefertaylor): Request funds from stability fund.
     # TODO(keefertaylor): Subtract appropriate amount of interest.
@@ -437,7 +447,6 @@ if __name__ == "__main__":
   # accrueInterest
   ################################################################
 
-  # TODO(keefertaylor): Rename away from interest index.
   @sp.add_test(name="accrueInterest - updates lastInterestIndexUpdateTime for one period")
   def test():
     # GIVEN a Pool contract
@@ -445,17 +454,17 @@ if __name__ == "__main__":
 
     pool = PoolContract(
       interestRate = sp.nat(0),
-      lastInterestUpdateTime = sp.nat(0)
+      lastInterestCompoundTime = sp.timestamp(0)
     )
     scenario += pool
 
     # WHEN interest is accrued after 1 compound period.
-    scenario += pool.accrueInterest(sp.unit).run(
-      now = Constants.SECONDS_PER_COMPOUND
+    scenario += pool.DEBUG_accrueInterest(sp.unit).run(
+      now = sp.timestamp(SECONDS_PER_COMPOUND)
     )
 
     # THEN the last interest update time is updated.
-    scenario.verify(pool.data.lastInterestCompoundTime == Constants.SECONDS_PER_COMPOUND)
+    scenario.verify(pool.data.lastInterestCompoundTime == sp.timestamp(SECONDS_PER_COMPOUND))
 
   @sp.add_test(name="accrueInterest - updates lastInterestIndexUpdateTime for two periods")
   def test():
@@ -464,17 +473,17 @@ if __name__ == "__main__":
 
     pool = PoolContract(
       interestRate = sp.nat(0),
-      lastInterestUpdateTime = sp.nat(0)
+      lastInterestCompoundTime = sp.timestamp(0)
     )
     scenario += pool
 
     # WHEN interest is accrued after 2 compound periods.
-    scenario += pool.accrueInterest(sp.unit).run(
-      now = Constants.SECONDS_PER_COMPOUND * 2
+    scenario += pool.DEBUG_accrueInterest(sp.unit).run(
+      now = sp.timestamp(SECONDS_PER_COMPOUND * 2)
     )
 
     # THEN the last interest update time is updated.
-    scenario.verify(pool.data.lastInterestCompoundTime == Constants.SECONDS_PER_COMPOUND * 2)
+    scenario.verify(pool.data.lastInterestCompoundTime == sp.timestamp(SECONDS_PER_COMPOUND * 2))
 
   @sp.add_test(name="accrueInterest - updates lastInterestIndexUpdateTime for one period with nonzero start")
   def test():
@@ -483,17 +492,17 @@ if __name__ == "__main__":
 
     pool = PoolContract(
       interestRate = sp.nat(0),
-      lastInterestUpdateTime = Constants.SECONDS_PER_COMPOUND
+      lastInterestCompoundTime = sp.timestamp(SECONDS_PER_COMPOUND)
     )
     scenario += pool
 
     # WHEN interest is accrued after 1 compound period.
-    scenario += pool.accrueInterest(sp.unit).run(
-      now = Constants.SECONDS_PER_COMPOUND
+    scenario += pool.DEBUG_accrueInterest(sp.unit).run(
+      now = sp.timestamp(SECONDS_PER_COMPOUND * 2)
     )
 
     # THEN the last interest update time is updated.
-    scenario.verify(pool.data.lastInterestCompoundTime == Constants.SECONDS_PER_COMPOUND * 2)
+    scenario.verify(pool.data.lastInterestCompoundTime == sp.timestamp(SECONDS_PER_COMPOUND * 2))
 
   @sp.add_test(name="accrueInterest - floors partial periods")
   def test():
@@ -502,17 +511,17 @@ if __name__ == "__main__":
 
     pool = PoolContract(
       interestRate = sp.nat(0),
-      lastInterestUpdateTime = sp.timestamp(0)
+      lastInterestCompoundTime = sp.timestamp(0)
     )
     scenario += pool
 
     # WHEN interest is accrued after 2.5 periods
-    scenario += pool.accrueInterest(sp.unit).run(
+    scenario += pool.DEBUG_accrueInterest(sp.unit).run(
       now = sp.timestamp(150) # 2.5 periods
     )
 
     # THEN the last interest update time is floored.
-    scenario.verify(pool.data.lastInterestCompoundTime == Constants.SECONDS_PER_COMPOUND * 2)    
+    scenario.verify(pool.data.lastInterestCompoundTime == sp.timestamp(SECONDS_PER_COMPOUND * 2))    
 
   ################################################################
   # Test Helpers
@@ -2026,7 +2035,7 @@ if __name__ == "__main__":
     scenario.verify(token.data.balances[Addresses.ALICE_ADDRESS].balance == aliceTokens / 2)
     scenario.verify(pool.data.balances[Addresses.ALICE_ADDRESS].balance == aliceTokens / 2 * PRECISION)
 
-    # AND Bob still has his position
+    AND Bob still has his position
     scenario.verify(token.data.balances[Addresses.BOB_ADDRESS].balance == sp.nat(0))
     scenario.verify(pool.data.balances[Addresses.BOB_ADDRESS].balance == aliceTokens * 4 * PRECISION)
 
