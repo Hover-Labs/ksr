@@ -54,6 +54,9 @@ class PoolContract(Token.FA12):
     # The last time the interest rate was updated.
     lastInterestCompoundTime = sp.timestamp(0),
 
+    # The initial token balance.
+    underlyingBalance = sp.nat(0),
+
     # The initial state of the state machine.
     state = IDLE,
 
@@ -116,7 +119,7 @@ class PoolContract(Token.FA12):
       interestRate = interestRate,
 
       # Internal State
-      underlyingBalance = sp.nat(0),
+      underlyingBalance = underlyingBalance,
       lastInterestCompoundTime = lastInterestCompoundTime,
       
       # State machinge
@@ -413,17 +416,24 @@ class PoolContract(Token.FA12):
 
     # Calculate the number of periods that elapsed.
     timeDeltaSeconds = sp.as_nat(sp.now - self.data.lastInterestCompoundTime)
-    numPeriods = timeDeltaSeconds // SECONDS_PER_COMPOUND
+    numPeriods = sp.local('numPeriods', timeDeltaSeconds // SECONDS_PER_COMPOUND)
 
     # Update the last updated time.
-    self.data.lastInterestCompoundTime = self.data.lastInterestCompoundTime.add_seconds(sp.to_int(numPeriods * SECONDS_PER_COMPOUND))
-    
-    # TODO(keefertaylor): Accrue interest.
+    self.data.lastInterestCompoundTime = self.data.lastInterestCompoundTime.add_seconds(sp.to_int(numPeriods.value * SECONDS_PER_COMPOUND))
+
+    # Determine the new amount of interest accrued.
+    newUnderlyingBalance = sp.local(
+      'newTotalUnderlying', 
+      self.data.underlyingBalance * (PRECISION + (numPeriods.value * self.data.interestRate)) // PRECISION
+    )
+    accruedInterest = sp.as_nat(newUnderlyingBalance.value - self.data.underlyingBalance)
+
     # TODO(keefertaylor): Request funds from stability fund.
-    # TODO(keefertaylor): Subtract appropriate amount of interest.
-    sp.result(sp.nat(0))
+
+    sp.result(accruedInterest)
 
   # Compound interest via a linear approximation.
+  # TODO(keefertaylor): Remove
   @sp.global_lambda
   def compoundWithLinearApproximation(params):
     sp.set_type(params, sp.TRecord(
@@ -453,7 +463,7 @@ if __name__ == "__main__":
   # accrueInterest
   ################################################################
 
-  @sp.add_test(name="accrueInterest - updates lastInterestIndexUpdateTime for one period")
+  @sp.add_test(name="accrueInterest - updates lastInterestCompoundTime for one period")
   def test():
     # GIVEN a Pool contract
     scenario = sp.test_scenario()
@@ -472,7 +482,7 @@ if __name__ == "__main__":
     # THEN the last interest update time is updated.
     scenario.verify(pool.data.lastInterestCompoundTime == sp.timestamp(SECONDS_PER_COMPOUND))
 
-  @sp.add_test(name="accrueInterest - updates lastInterestIndexUpdateTime for two periods")
+  @sp.add_test(name="accrueInterest - updates lastInterestCompoundTime for two periods")
   def test():
     # GIVEN a Pool contract
     scenario = sp.test_scenario()
@@ -491,7 +501,7 @@ if __name__ == "__main__":
     # THEN the last interest update time is updated.
     scenario.verify(pool.data.lastInterestCompoundTime == sp.timestamp(SECONDS_PER_COMPOUND * 2))
 
-  @sp.add_test(name="accrueInterest - updates lastInterestIndexUpdateTime for one period with nonzero start")
+  @sp.add_test(name="accrueInterest - updates lastInterestCompoundTime for one period with nonzero start")
   def test():
     # GIVEN a Pool contract with a previous interest update time.
     scenario = sp.test_scenario()
@@ -510,7 +520,7 @@ if __name__ == "__main__":
     # THEN the last interest update time is updated.
     scenario.verify(pool.data.lastInterestCompoundTime == sp.timestamp(SECONDS_PER_COMPOUND * 2))
 
-  @sp.add_test(name="accrueInterest - floors partial periods")
+  @sp.add_test(name="accrueInterest - updates lastInterestCompoundTime by flooring partial periods")
   def test():
     # GIVEN a Pool contract
     scenario = sp.test_scenario()
@@ -529,9 +539,93 @@ if __name__ == "__main__":
     # THEN the last interest update time is floored.
     scenario.verify(pool.data.lastInterestCompoundTime == sp.timestamp(SECONDS_PER_COMPOUND * 2))    
 
-  ################################################################
-  # Test Helpers
-  ################################################################
+  @sp.add_test(name="accrueInterest - calculates accrued interest for one period")
+  def test():
+    # GIVEN a Pool contract
+    scenario = sp.test_scenario()
+
+    initialValue = sp.nat(1 * PRECISION)
+    pool = PoolContract(
+      interestRate = sp.nat(100000000000000000),
+      underlyingBalance = initialValue,
+      lastInterestCompoundTime = sp.timestamp(0)
+    )
+    scenario += pool
+
+    # WHEN interest is accrued after 1 compound period.
+    scenario += pool.DEBUG_accrueInterest(sp.unit).run(
+      now = sp.timestamp(SECONDS_PER_COMPOUND)
+    )
+
+    # THEN the the accrued interest is calculated correctly.
+    scenario.verify(pool.data.debug_accrueInterest.open_some() == sp.as_nat(1100000000000000000 - initialValue))
+
+  @sp.add_test(name="accrueInterest - calculates accrued interest for two periods")
+  def test():
+    # GIVEN a Pool contract
+    scenario = sp.test_scenario()
+
+    initialValue = sp.nat(1 * PRECISION)
+    pool = PoolContract(
+      interestRate = sp.nat(100000000000000000),
+      underlyingBalance = initialValue,
+      lastInterestCompoundTime = sp.timestamp(0)
+    )
+    scenario += pool
+
+    # WHEN interest is accrued after 2 compound periods.
+    scenario += pool.DEBUG_accrueInterest(sp.unit).run(
+      now = sp.timestamp(SECONDS_PER_COMPOUND * 2)
+    )
+
+    # THEN the the accrued interest is calculated correctly.
+    scenario.verify(pool.data.debug_accrueInterest.open_some() == sp.as_nat(1200000000000000000 - initialValue))
+
+  @sp.add_test(name="accrueInterest - calculates accrued interest for one period with nonzero start")
+  def test():
+    # GIVEN a Pool contract with a previous interest update time.
+    scenario = sp.test_scenario()
+
+    initialValue = 1100000000000000000
+    pool = PoolContract(
+      interestRate = sp.nat(100000000000000000),
+      underlyingBalance = initialValue,
+      lastInterestCompoundTime = sp.timestamp(SECONDS_PER_COMPOUND)
+    )
+    scenario += pool
+
+    # WHEN interest is accrued after 1 compound period.
+    scenario += pool.DEBUG_accrueInterest(sp.unit).run(
+      now = sp.timestamp(SECONDS_PER_COMPOUND * 2)
+    )
+
+    # THEN the the accrued interest is calculated correctly.
+    scenario.verify(pool.data.debug_accrueInterest.open_some() == sp.as_nat(1210000000000000000 - initialValue))
+
+  @sp.add_test(name="accrueInterest - calculates accrued interest by flooring partial periods")
+  def test():
+    # GIVEN a Pool contract
+    scenario = sp.test_scenario()
+
+    initialValue = sp.nat(1 * PRECISION)
+    pool = PoolContract(
+      interestRate = sp.nat(100000000000000000),
+      underlyingBalance = initialValue,
+      lastInterestCompoundTime = sp.timestamp(0)
+    )
+    scenario += pool
+
+    # WHEN interest is accrued after 2.5 periods
+    scenario += pool.DEBUG_accrueInterest(sp.unit).run(
+      now = sp.timestamp(150) # 2.5 periods
+    )
+
+    # THEN the the accrued interest is calculated correctly.
+    scenario.verify(pool.data.debug_accrueInterest.open_some() == sp.as_nat(1200000000000000000 - initialValue))
+
+  # ################################################################
+  # # Test Helpers
+  # ################################################################
 
   # A Tester flass that wraps a lambda function to allow for unit testing.
   # See: https://smartpy.io/releases/20201220-f9f4ad18bd6ec2293f22b8c8812fefbde46d6b7d/ide?template=test_global_lambda.py
