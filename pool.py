@@ -2035,7 +2035,7 @@ if __name__ == "__main__":
     scenario.verify(token.data.balances[Addresses.ALICE_ADDRESS].balance == aliceTokens / 2)
     scenario.verify(pool.data.balances[Addresses.ALICE_ADDRESS].balance == aliceTokens / 2 * PRECISION)
 
-    AND Bob still has his position
+    # AND Bob still has his position
     scenario.verify(token.data.balances[Addresses.BOB_ADDRESS].balance == sp.nat(0))
     scenario.verify(pool.data.balances[Addresses.BOB_ADDRESS].balance == aliceTokens * 4 * PRECISION)
 
