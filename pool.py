@@ -175,12 +175,12 @@ class PoolContract(Token.FA12):
       fractionOfPoolOwnership = sp.local('fractionOfPoolOwnership', (tokensToDeposit.value * PRECISION) / newUnderlyingBalance.value)
       newTokens.value = ((fractionOfPoolOwnership.value * self.data.totalSupply) / (sp.as_nat(PRECISION - fractionOfPoolOwnership.value)))
 
-    # TODO(keefertaylor): Implement.
-    accruedInterest = sp.local('accruedInterest', sp.nat(0))
+    # Calculate the newly accrued interest.
+    accruedInterest = self.accrueInterest(sp.unit)
 
     # Debit underlying balance by the amount of tokens that will be sent
     # TODO(keefertaylor): Test.
-    self.data.underlyingBalance = updatedBalance + accruedInterest.value + tokensToDeposit.value
+    self.data.underlyingBalance = updatedBalance + accruedInterest + tokensToDeposit.value
 
     # Transfer tokens to this contract.
     depositor = sp.local('depositor', self.data.savedState_depositor.open_some())
@@ -251,12 +251,12 @@ class PoolContract(Token.FA12):
     fractionOfPoolOwnership = sp.local('fractionOfPoolOwnership', (tokensToRedeem.value * PRECISION) / self.data.totalSupply)
     tokensToReceive = sp.local('tokensToReceive', (fractionOfPoolOwnership.value * updatedBalance) / PRECISION)
 
-    # TODO(keefertaylor): Implement.
-    accruedInterest = sp.local('accruedInterest', sp.nat(0))
+    # Calculate the newly accrued interest.
+    accruedInterest = self.accrueInterest(sp.unit)
 
     # Debit underlying balance by the amount of tokens that will be sent
     # TODO(keefertaylor): Test.
-    self.data.underlyingBalance = sp.as_nat(updatedBalance + accruedInterest.value - tokensToReceive.value)
+    self.data.underlyingBalance = sp.as_nat(updatedBalance + accruedInterest - tokensToReceive.value)
 
     # Burn the tokens being redeemed.
     redeemer = sp.local('redeemer', self.data.savedState_redeemer.open_some())
