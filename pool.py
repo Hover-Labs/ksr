@@ -426,11 +426,18 @@ class PoolContract(Token.FA12):
       'newTotalUnderlying', 
       self.data.underlyingBalance * (PRECISION + (numPeriods.value * self.data.interestRate)) // PRECISION
     )
-    accruedInterest = sp.as_nat(newUnderlyingBalance.value - self.data.underlyingBalance)
+    accruedInterest = sp.local('accruedInterest', sp.as_nat(newUnderlyingBalance.value - self.data.underlyingBalance))
 
-    # TODO(keefertaylor): Request funds from stability fund.
+    # Transfer in accrued tokens
+    stabilityFundHandle = sp.contract(
+      sp.TNat,
+      self.data.stabilityFundAddress,
+      'accrueInterest'
+    ).open_some()
+    sp.transfer(accruedInterest.value, sp.mutez(0), stabilityFundHandle)
 
-    sp.result(accruedInterest)
+    # Return the number of newly accrued tokens.
+    sp.result(accruedInterest.value)
 
   # Compound interest via a linear approximation.
   # TODO(keefertaylor): Remove
@@ -458,6 +465,7 @@ if __name__ == "__main__":
   FakeDexter = sp.import_script_from_url("file:./test-helpers/fake-dexter-pool.py")
   FakeOven = sp.import_script_from_url("file:./test-helpers/fake-oven.py")
   FakeOvenRegistry = sp.import_script_from_url("file:./test-helpers/fake-oven-registry.py")
+  StabilityFund = sp.import_script_from_url("file:./stability-fund.py")
 
   ################################################################
   # accrueInterest
@@ -623,9 +631,245 @@ if __name__ == "__main__":
     # THEN the the accrued interest is calculated correctly.
     scenario.verify(pool.data.debug_accrueInterest.open_some() == sp.as_nat(1200000000000000000 - initialValue))
 
-  # ################################################################
-  # # Test Helpers
-  # ################################################################
+  @sp.add_test(name="accrueInterest - retrieves stability fees for one period")
+  def test():
+    scenario = sp.test_scenario()
+
+    # GIVEN a token contract.
+    token = FA12.FA12(
+      admin = Addresses.ADMIN_ADDRESS
+    )
+    scenario += token
+
+    # AND a Pool contract
+    initialValue = sp.nat(1 * PRECISION)
+    pool = PoolContract(
+      interestRate = sp.nat(100000000000000000),
+      underlyingBalance = initialValue,
+      lastInterestCompoundTime = sp.timestamp(0)
+    )
+    scenario += pool
+
+    # AND a stability fund contract.
+    stabilityFund = StabilityFund.StabilityFundContract(
+      savingsAccountContractAddress = pool.address,
+      tokenContractAddress = token.address,
+    )
+    scenario += stabilityFund
+
+    # AND the pool contract is wired to the stability fund.
+    scenario += pool.updateStabilityFundAddress(stabilityFund.address).run(
+      sender = Addresses.GOVERNOR_ADDRESS
+    )
+
+    # AND the pool has the initial underlying balance.
+    scenario += token.mint(
+      sp.record(
+        address = pool.address,
+        value = initialValue
+      )
+    ).run(
+      sender = Addresses.ADMIN_ADDRESS
+    )
+
+    # AND the stability fund has many tokens
+    scenario += token.mint(
+      sp.record(
+        address = stabilityFund.address,
+        value = sp.nat(1000000 * PRECISION)
+      )
+    ).run(
+      sender = Addresses.ADMIN_ADDRESS
+    )
+
+    # WHEN interest is accrued after 1 compound period.
+    scenario += pool.DEBUG_accrueInterest(sp.unit).run(
+      now = sp.timestamp(SECONDS_PER_COMPOUND)
+    )
+
+    # THEN the contract has the right number of tokens.
+    scenario.verify(token.data.balances[pool.address].balance == 1100000000000000000)
+
+  @sp.add_test(name="accrueInterest - retrieves stability fees for two periods")
+  def test():
+    scenario = sp.test_scenario()
+
+    # GIVEN a token contract.
+    token = FA12.FA12(
+      admin = Addresses.ADMIN_ADDRESS
+    )
+    scenario += token
+
+    # AND a Pool contract
+    initialValue = sp.nat(1 * PRECISION)
+    pool = PoolContract(
+      interestRate = sp.nat(100000000000000000),
+      underlyingBalance = initialValue,
+      lastInterestCompoundTime = sp.timestamp(0)
+    )
+    scenario += pool
+
+    # AND a stability fund contract.
+    stabilityFund = StabilityFund.StabilityFundContract(
+      savingsAccountContractAddress = pool.address,
+      tokenContractAddress = token.address,
+    )
+    scenario += stabilityFund
+
+    # AND the pool contract is wired to the stability fund.
+    scenario += pool.updateStabilityFundAddress(stabilityFund.address).run(
+      sender = Addresses.GOVERNOR_ADDRESS
+    )
+
+    # AND the pool has the initial underlying balance.
+    scenario += token.mint(
+      sp.record(
+        address = pool.address,
+        value = initialValue
+      )
+    ).run(
+      sender = Addresses.ADMIN_ADDRESS
+    )
+
+    # AND the stability fund has many tokens
+    scenario += token.mint(
+      sp.record(
+        address = stabilityFund.address,
+        value = sp.nat(1000000 * PRECISION)
+      )
+    ).run(
+      sender = Addresses.ADMIN_ADDRESS
+    )
+
+    # WHEN interest is accrued after 2 compound periods.
+    scenario += pool.DEBUG_accrueInterest(sp.unit).run(
+      now = sp.timestamp(2 * SECONDS_PER_COMPOUND)
+    )
+
+    # THEN the contract has the right number of tokens.
+    scenario.verify(token.data.balances[pool.address].balance == 1200000000000000000)    
+
+  @sp.add_test(name="accrueInterest - retrieves stability fees for one periods starting at nonzero")
+  def test():
+    scenario = sp.test_scenario()
+
+    # GIVEN a token contract.
+    token = FA12.FA12(
+      admin = Addresses.ADMIN_ADDRESS
+    )
+    scenario += token
+
+    # AND a Pool contract
+    initialValue = sp.nat(1100000000000000000)
+    pool = PoolContract(
+      interestRate = sp.nat(100000000000000000),
+      underlyingBalance = initialValue,
+      lastInterestCompoundTime = sp.timestamp(SECONDS_PER_COMPOUND)
+    )
+    scenario += pool
+
+    # AND a stability fund contract.
+    stabilityFund = StabilityFund.StabilityFundContract(
+      savingsAccountContractAddress = pool.address,
+      tokenContractAddress = token.address,
+    )
+    scenario += stabilityFund
+
+    # AND the pool contract is wired to the stability fund.
+    scenario += pool.updateStabilityFundAddress(stabilityFund.address).run(
+      sender = Addresses.GOVERNOR_ADDRESS
+    )
+
+    # AND the pool has the initial underlying balance.
+    scenario += token.mint(
+      sp.record(
+        address = pool.address,
+        value = initialValue
+      )
+    ).run(
+      sender = Addresses.ADMIN_ADDRESS
+    )
+
+    # AND the stability fund has many tokens
+    scenario += token.mint(
+      sp.record(
+        address = stabilityFund.address,
+        value = sp.nat(1000000 * PRECISION)
+      )
+    ).run(
+      sender = Addresses.ADMIN_ADDRESS
+    )
+
+    # WHEN interest is accrued after the second compound period.
+    scenario += pool.DEBUG_accrueInterest(sp.unit).run(
+      now = sp.timestamp(2 * SECONDS_PER_COMPOUND)
+    )
+
+    # THEN the contract has the right number of tokens.
+    scenario.verify(token.data.balances[pool.address].balance == 1210000000000000000)        
+
+  @sp.add_test(name="accrueInterest - correctly floors partial periods")
+  def test():
+    scenario = sp.test_scenario()
+
+    # GIVEN a token contract.
+    token = FA12.FA12(
+      admin = Addresses.ADMIN_ADDRESS
+    )
+    scenario += token
+
+    # AND a Pool contract
+    initialValue = sp.nat(1 * PRECISION)
+    pool = PoolContract(
+      interestRate = sp.nat(100000000000000000),
+      underlyingBalance = initialValue,
+      lastInterestCompoundTime = sp.timestamp(0)
+    )
+    scenario += pool
+
+    # AND a stability fund contract.
+    stabilityFund = StabilityFund.StabilityFundContract(
+      savingsAccountContractAddress = pool.address,
+      tokenContractAddress = token.address,
+    )
+    scenario += stabilityFund
+
+    # AND the pool contract is wired to the stability fund.
+    scenario += pool.updateStabilityFundAddress(stabilityFund.address).run(
+      sender = Addresses.GOVERNOR_ADDRESS
+    )
+
+    # AND the pool has the initial underlying balance.
+    scenario += token.mint(
+      sp.record(
+        address = pool.address,
+        value = initialValue
+      )
+    ).run(
+      sender = Addresses.ADMIN_ADDRESS
+    )
+
+    # AND the stability fund has many tokens
+    scenario += token.mint(
+      sp.record(
+        address = stabilityFund.address,
+        value = sp.nat(1000000 * PRECISION)
+      )
+    ).run(
+      sender = Addresses.ADMIN_ADDRESS
+    )
+
+    # WHEN interest is accrued after 2 and a half compound periods.
+    scenario += pool.DEBUG_accrueInterest(sp.unit).run(
+      now = sp.timestamp(150) # 2.5 periods
+    )
+
+    # THEN the contract has the right number of tokens.
+    scenario.verify(token.data.balances[pool.address].balance == 1200000000000000000)    
+
+  ################################################################
+  # Test Helpers
+  ################################################################
 
   # A Tester flass that wraps a lambda function to allow for unit testing.
   # See: https://smartpy.io/releases/20201220-f9f4ad18bd6ec2293f22b8c8812fefbde46d6b7d/ide?template=test_global_lambda.py
