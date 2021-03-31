@@ -1,6 +1,6 @@
 import smartpy as sp
 
-Token= sp.import_script_from_url("file:token.py")
+Token = sp.import_script_from_url("file:token.py")
 
 ################################################################
 ################################################################
@@ -9,7 +9,11 @@ Token= sp.import_script_from_url("file:token.py")
 ################################################################
 
 # The number of decimals of precision.
+# TODO(keefertaylor): Migrate to constants
 PRECISION = 1000000000000000000 # 18 decimals
+
+# TODO(keefertaylor): Migrate to constants
+SECONDS_PER_COMPOUND = 60
 
 ################################################################
 ################################################################
@@ -46,6 +50,9 @@ class PoolContract(Token.FA12):
 
     # The interest rate.
     interestRate = sp.nat(0),
+
+    # The last time the interest rate was updated.
+    lastInterestCompoundTime = sp.timestamp(0),
 
     # The initial state of the state machine.
     state = IDLE,
@@ -110,6 +117,7 @@ class PoolContract(Token.FA12):
 
       # Internal State
       underlyingBalance = sp.nat(0),
+      lastInterestCompoundTime = lastInterestCompoundTime,
       
       # State machinge
       state = state,
@@ -117,6 +125,9 @@ class PoolContract(Token.FA12):
       savedState_redeemer = savedState_redeemer, # Account redeeming tokens, populated when state = WAITING_REDEEM
       savedState_tokensToDeposit = savedState_tokensToDeposit, # Amount of tokens to deposit, populated when state = WAITING_DEPOSIT
       savedState_depositor = savedState_depositor, # Account depositing the tokens, populated when state = WAITING_DEPOSIT
+
+      # Debugging
+      debug_accrueInterest = sp.none,
     )
 
   ################################################################
@@ -377,6 +388,41 @@ class PoolContract(Token.FA12):
   # Helpers
   ################################################################
 
+  # This entrypoint should never be called.
+  #
+  # It exposes `accrueInterest` for testing. `accrueInterest` is idempotent though
+  # so there's no harm is someone wants to call it. 
+  # 
+  # The result of `accrueInterest` is saved in `debug_accrueInterest` for examination.
+  @sp.entry_point
+  def DEBUG_accrueInterest(self, unit): 
+    self.data.debug_accrueInterest = sp.some(self.accrueInterest(sp.unit))
+
+  # Helper function to:
+  # - Calculate elapsed periods
+  # - Accrue interest using linear approximation
+  # - Request funds
+  #
+  # This functionality is split out for re-use and for testing.
+  #
+  # Param: unit
+  # Return: The newly accrued interest
+  @sp.sub_entry_point
+  def accrueInterest(self, unit):
+    sp.set_type(unit, sp.TUnit)
+
+    # Calculate the number of periods that elapsed.
+    timeDeltaSeconds = sp.as_nat(sp.now - self.data.lastInterestCompoundTime)
+    numPeriods = timeDeltaSeconds // SECONDS_PER_COMPOUND
+
+    # Update the last updated time.
+    self.data.lastInterestCompoundTime = self.data.lastInterestCompoundTime.add_seconds(sp.to_int(numPeriods * SECONDS_PER_COMPOUND))
+    
+    # TODO(keefertaylor): Accrue interest.
+    # TODO(keefertaylor): Request funds from stability fund.
+    # TODO(keefertaylor): Subtract appropriate amount of interest.
+    sp.result(sp.nat(0))
+
   # Compound interest via a linear approximation.
   @sp.global_lambda
   def compoundWithLinearApproximation(params):
@@ -402,6 +448,86 @@ if __name__ == "__main__":
   FakeDexter = sp.import_script_from_url("file:./test-helpers/fake-dexter-pool.py")
   FakeOven = sp.import_script_from_url("file:./test-helpers/fake-oven.py")
   FakeOvenRegistry = sp.import_script_from_url("file:./test-helpers/fake-oven-registry.py")
+
+  ################################################################
+  # accrueInterest
+  ################################################################
+
+  @sp.add_test(name="accrueInterest - updates lastInterestIndexUpdateTime for one period")
+  def test():
+    # GIVEN a Pool contract
+    scenario = sp.test_scenario()
+
+    pool = PoolContract(
+      interestRate = sp.nat(0),
+      lastInterestCompoundTime = sp.timestamp(0)
+    )
+    scenario += pool
+
+    # WHEN interest is accrued after 1 compound period.
+    scenario += pool.DEBUG_accrueInterest(sp.unit).run(
+      now = sp.timestamp(SECONDS_PER_COMPOUND)
+    )
+
+    # THEN the last interest update time is updated.
+    scenario.verify(pool.data.lastInterestCompoundTime == sp.timestamp(SECONDS_PER_COMPOUND))
+
+  @sp.add_test(name="accrueInterest - updates lastInterestIndexUpdateTime for two periods")
+  def test():
+    # GIVEN a Pool contract
+    scenario = sp.test_scenario()
+
+    pool = PoolContract(
+      interestRate = sp.nat(0),
+      lastInterestCompoundTime = sp.timestamp(0)
+    )
+    scenario += pool
+
+    # WHEN interest is accrued after 2 compound periods.
+    scenario += pool.DEBUG_accrueInterest(sp.unit).run(
+      now = sp.timestamp(SECONDS_PER_COMPOUND * 2)
+    )
+
+    # THEN the last interest update time is updated.
+    scenario.verify(pool.data.lastInterestCompoundTime == sp.timestamp(SECONDS_PER_COMPOUND * 2))
+
+  @sp.add_test(name="accrueInterest - updates lastInterestIndexUpdateTime for one period with nonzero start")
+  def test():
+    # GIVEN a Pool contract with a previous interest update time.
+    scenario = sp.test_scenario()
+
+    pool = PoolContract(
+      interestRate = sp.nat(0),
+      lastInterestCompoundTime = sp.timestamp(SECONDS_PER_COMPOUND)
+    )
+    scenario += pool
+
+    # WHEN interest is accrued after 1 compound period.
+    scenario += pool.DEBUG_accrueInterest(sp.unit).run(
+      now = sp.timestamp(SECONDS_PER_COMPOUND * 2)
+    )
+
+    # THEN the last interest update time is updated.
+    scenario.verify(pool.data.lastInterestCompoundTime == sp.timestamp(SECONDS_PER_COMPOUND * 2))
+
+  @sp.add_test(name="accrueInterest - floors partial periods")
+  def test():
+    # GIVEN a Pool contract
+    scenario = sp.test_scenario()
+
+    pool = PoolContract(
+      interestRate = sp.nat(0),
+      lastInterestCompoundTime = sp.timestamp(0)
+    )
+    scenario += pool
+
+    # WHEN interest is accrued after 2.5 periods
+    scenario += pool.DEBUG_accrueInterest(sp.unit).run(
+      now = sp.timestamp(150) # 2.5 periods
+    )
+
+    # THEN the last interest update time is floored.
+    scenario.verify(pool.data.lastInterestCompoundTime == sp.timestamp(SECONDS_PER_COMPOUND * 2))    
 
   ################################################################
   # Test Helpers
