@@ -554,37 +554,36 @@ if __name__ == "__main__":
     # THEN the last interest update time is updated.
     scenario.verify(tester.data.lastInterestCompoundTime == sp.timestamp(Constants.SECONDS_PER_COMPOUND * 2))
 
-  # TODO(keefertaylor): enable
-  # @sp.add_test(name="accrueInterest - updates lastInterestCompoundTime by flooring partial periods")
-  # def test():
-  #   # GIVEN a Pool contract
-  #   scenario = sp.test_scenario()
+  @sp.add_test(name="accrueInterest - updates lastInterestCompoundTime by flooring partial periods")
+  def test():
+    # GIVEN a Pool contract
+    scenario = sp.test_scenario()
 
-  #   interestRate = sp.nat(0),
-  #   lastInterestCompoundTime = sp.timestamp(0)
-  #   pool = PoolContract(
-  #     interestRate = interestRate,
-  #     lastInterestCompoundTime = lastInterestCompoundTime
-  #   )
-  #   scenario += pool
+    interestRate = sp.nat(0),
+    lastInterestCompoundTime = sp.timestamp(0)
+    pool = PoolContract(
+      interestRate = interestRate,
+      lastInterestCompoundTime = lastInterestCompoundTime
+    )
+    scenario += pool
 
-  #   # AND a tester.
-  #   tester = Tester(
-  #     pool.accrueInterest,
-  #     interestRate = interestRate,
-  #     lastInterestCompoundTime = lastInterestCompoundTime,
-  #     stabilityFundAddress = Addresses.STABILITY_FUND_ADDRESS,
-  #     underlyingBalance = sp.nat(0)
-  #   )
-  #   scenario += tester
+    # AND a tester.
+    tester = Tester(
+      pool.accrueInterest,
+      interestRate = interestRate,
+      lastInterestCompoundTime = lastInterestCompoundTime,
+      stabilityFundAddress = Addresses.STABILITY_FUND_ADDRESS,
+      underlyingBalance = sp.nat(0)
+    )
+    scenario += tester
 
-  #   # # WHEN interest is accrued after 2.5 periods
-  #   # scenario += tester.testContractEntryPoint(sp.unit).run(
-  #   #   now = sp.timestamp(150) # 2.5 periods
-  #   # )
+    # # WHEN interest is accrued after 2.5 periods
+    # scenario += tester.testContractEntryPoint(sp.unit).run(
+    #   now = sp.timestamp(150) # 2.5 periods
+    # )
 
-  #   # # THEN the last interest update time is floored.
-  #   # scenario.verify(tester.data.lastInterestCompoundTime == sp.timestamp(Constants.SECONDS_PER_COMPOUND * 2))    
+    # # THEN the last interest update time is floored.
+    # scenario.verify(tester.data.lastInterestCompoundTime == sp.timestamp(Constants.SECONDS_PER_COMPOUND * 2))    
 
   @sp.add_test(name="accrueInterest - calculates accrued interest for one period")
   def test():
