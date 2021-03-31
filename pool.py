@@ -554,6 +554,7 @@ if __name__ == "__main__":
     # THEN the last interest update time is updated.
     scenario.verify(tester.data.lastInterestCompoundTime == sp.timestamp(Constants.SECONDS_PER_COMPOUND * 2))
 
+  TODO(keefertaylor): enable
   @sp.add_test(name="accrueInterest - updates lastInterestCompoundTime by flooring partial periods")
   def test():
     # GIVEN a Pool contract
@@ -576,7 +577,7 @@ if __name__ == "__main__":
       underlyingBalance = sp.nat(0)
     )
     scenario += tester
-
+    
     # # WHEN interest is accrued after 2.5 periods
     # scenario += tester.testContractEntryPoint(sp.unit).run(
     #   now = sp.timestamp(150) # 2.5 periods
