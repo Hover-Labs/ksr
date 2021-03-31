@@ -1109,6 +1109,8 @@ if __name__ == "__main__":
     # THEN the contract has the right number of tokens.
     scenario.verify(token.data.balances[pool.address].balance == 1100000000000000000)
 
+    # TODO(keefertaylor): Make sure underlyingBalance got updated correctly.
+
   @sp.add_test(name="updateInterestRate - accrues interest")
   def test():
     scenario = sp.test_scenario()
