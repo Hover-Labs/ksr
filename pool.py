@@ -168,6 +168,7 @@ class PoolContract(Token.FA12):
     accruedInterest = sp.local('accruedInterest', sp.nat(0))
 
     # Debit underlying balance by the amount of tokens that will be sent
+    # TODO(keefertaylor): Test.
     self.data.underlyingBalance = updatedBalance + accruedInterest.value + tokensToDeposit.value
 
     # Transfer tokens to this contract.
@@ -243,6 +244,7 @@ class PoolContract(Token.FA12):
     accruedInterest = sp.local('accruedInterest', sp.nat(0))
 
     # Debit underlying balance by the amount of tokens that will be sent
+    # TODO(keefertaylor): Test.
     self.data.underlyingBalance = sp.as_nat(updatedBalance + accruedInterest.value - tokensToReceive.value)
 
     # Burn the tokens being redeemed.
