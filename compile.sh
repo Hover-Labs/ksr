@@ -13,7 +13,8 @@ SMART_PY_CLI=~/smartpy-cli/SmartPy.sh
 OUT_DIR=./.smartpy_out
 
 # Array of files to compile.
-CONTRACTS_ARRAY=( dev-fund pool stability-fund )
+# TODO(keefertaylor): Enable
+CONTRACTS_ARRAY=( stability-fund ) # dev-fund pool 
 
 # Ensure we have a SmartPy binary.
 if [ ! -f "$SMART_PY_CLI" ]; then
