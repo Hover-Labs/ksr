@@ -115,9 +115,6 @@ class PoolContract(Token.FA12):
       savedState_redeemer = savedState_redeemer, # Account redeeming tokens, populated when state = WAITING_REDEEM
       savedState_tokensToDeposit = savedState_tokensToDeposit, # Amount of tokens to deposit, populated when state = WAITING_DEPOSIT
       savedState_depositor = savedState_depositor, # Account depositing the tokens, populated when state = WAITING_DEPOSIT
-
-      # Debugging
-      debug_accrueInterest = sp.none,
     )
 
   ################################################################
@@ -378,16 +375,6 @@ class PoolContract(Token.FA12):
   # Helpers
   ################################################################
 
-  # This entrypoint should never be called.
-  #
-  # It exposes `accrueInterest` for testing. `accrueInterest` is idempotent though
-  # so there's no harm is someone wants to call it. 
-  # 
-  # The result of `accrueInterest` is saved in `debug_accrueInterest` for examination.
-  @sp.entry_point
-  def DEBUG_accrueInterest(self, unit): 
-    self.data.debug_accrueInterest = sp.some(self.accrueInterest(sp.unit))
-
   # Helper function to:
   # - Calculate elapsed periods
   # - Accrue interest using linear approximation
@@ -443,6 +430,34 @@ if __name__ == "__main__":
   StabilityFund = sp.import_script_from_url("file:./stability-fund.py")
 
   ################################################################
+  # Test Helpers
+  ################################################################
+
+  # Tests sub_entry_points
+  # See: https://t.me/SmartPy_io/9155
+  class Tester(sp.Contract):
+    def __init__(
+      self,
+      contractEntrypoint,
+      interestRate,
+      lastInterestCompoundTime,
+      stabilityFundAddress,
+      underlyingBalance
+    ):
+      self.contractEntrypoint = contractEntrypoint
+      self.init(
+        result = sp.none, 
+        interestRate = interestRate,
+        lastInterestCompoundTime = lastInterestCompoundTime,
+        stabilityFundAddress = stabilityFundAddress,
+        underlyingBalance = underlyingBalance,
+      )
+        
+    @sp.entry_point
+    def testContractEntryPoint(self, params):
+      self.data.result = sp.some(self.contractEntrypoint(params))
+
+  ################################################################
   # accrueInterest
   ################################################################
 
@@ -451,160 +466,256 @@ if __name__ == "__main__":
     # GIVEN a Pool contract
     scenario = sp.test_scenario()
 
+    interestRate = sp.nat(0)
+    lastInterestCompoundTime = sp.timestamp(0)
     pool = PoolContract(
-      interestRate = sp.nat(0),
-      lastInterestCompoundTime = sp.timestamp(0)
+      interestRate = interestRate,
+      lastInterestCompoundTime = lastInterestCompoundTime
     )
     scenario += pool
 
+    # AND a tester.
+    tester = Tester(
+      pool.accrueInterest,
+      interestRate = interestRate,
+      lastInterestCompoundTime = lastInterestCompoundTime,
+      stabilityFundAddress = Addresses.STABILITY_FUND_ADDRESS,
+      underlyingBalance = sp.nat(0)
+    )
+    scenario += tester
+
     # WHEN interest is accrued after 1 compound period.
-    scenario += pool.DEBUG_accrueInterest(sp.unit).run(
+    scenario += tester.testContractEntryPoint(sp.unit).run(
       now = sp.timestamp(Constants.SECONDS_PER_COMPOUND)
     )
 
     # THEN the last interest update time is updated.
-    scenario.verify(pool.data.lastInterestCompoundTime == sp.timestamp(Constants.SECONDS_PER_COMPOUND))
+    scenario.verify(tester.data.lastInterestCompoundTime == sp.timestamp(Constants.SECONDS_PER_COMPOUND))
 
   @sp.add_test(name="accrueInterest - updates lastInterestCompoundTime for two periods")
   def test():
     # GIVEN a Pool contract
     scenario = sp.test_scenario()
 
+    interestRate = sp.nat(0)
+    lastInterestCompoundTime = sp.timestamp(0)
     pool = PoolContract(
-      interestRate = sp.nat(0),
-      lastInterestCompoundTime = sp.timestamp(0)
+      interestRate = interestRate,
+      lastInterestCompoundTime = lastInterestCompoundTime
     )
     scenario += pool
 
+    # AND a tester.
+    tester = Tester(
+      pool.accrueInterest,
+      interestRate = interestRate,
+      lastInterestCompoundTime = lastInterestCompoundTime,
+      stabilityFundAddress = Addresses.STABILITY_FUND_ADDRESS,
+      underlyingBalance = sp.nat(0)
+    )
+    scenario += tester
+
     # WHEN interest is accrued after 2 compound periods.
-    scenario += pool.DEBUG_accrueInterest(sp.unit).run(
+    scenario += tester.testContractEntryPoint(sp.unit).run(
       now = sp.timestamp(Constants.SECONDS_PER_COMPOUND * 2)
     )
 
     # THEN the last interest update time is updated.
-    scenario.verify(pool.data.lastInterestCompoundTime == sp.timestamp(Constants.SECONDS_PER_COMPOUND * 2))
+    scenario.verify(tester.data.lastInterestCompoundTime == sp.timestamp(Constants.SECONDS_PER_COMPOUND * 2))
 
   @sp.add_test(name="accrueInterest - updates lastInterestCompoundTime for one period with nonzero start")
   def test():
     # GIVEN a Pool contract with a previous interest update time.
     scenario = sp.test_scenario()
 
+    interestRate = sp.nat(0)
+    lastInterestCompoundTime = sp.timestamp(Constants.SECONDS_PER_COMPOUND)
     pool = PoolContract(
-      interestRate = sp.nat(0),
-      lastInterestCompoundTime = sp.timestamp(Constants.SECONDS_PER_COMPOUND)
+      interestRate = interestRate,
+      lastInterestCompoundTime = lastInterestCompoundTime
     )
     scenario += pool
 
+    # AND a tester.
+    tester = Tester(
+      pool.accrueInterest,
+      interestRate = interestRate,
+      lastInterestCompoundTime = lastInterestCompoundTime,
+      stabilityFundAddress = Addresses.STABILITY_FUND_ADDRESS,
+      underlyingBalance = sp.nat(0)
+    )
+    scenario += tester
+
     # WHEN interest is accrued after 1 compound period.
-    scenario += pool.DEBUG_accrueInterest(sp.unit).run(
+    scenario += tester.testContractEntryPoint(sp.unit).run(
       now = sp.timestamp(Constants.SECONDS_PER_COMPOUND * 2)
     )
 
     # THEN the last interest update time is updated.
-    scenario.verify(pool.data.lastInterestCompoundTime == sp.timestamp(Constants.SECONDS_PER_COMPOUND * 2))
+    scenario.verify(tester.data.lastInterestCompoundTime == sp.timestamp(Constants.SECONDS_PER_COMPOUND * 2))
 
   @sp.add_test(name="accrueInterest - updates lastInterestCompoundTime by flooring partial periods")
   def test():
     # GIVEN a Pool contract
     scenario = sp.test_scenario()
 
+    interestRate = sp.nat(0)
+    lastInterestCompoundTime = sp.timestamp(0)
     pool = PoolContract(
-      interestRate = sp.nat(0),
-      lastInterestCompoundTime = sp.timestamp(0)
+      interestRate = interestRate,
+      lastInterestCompoundTime = lastInterestCompoundTime
     )
     scenario += pool
 
+    # AND a tester.
+    tester = Tester(
+      pool.accrueInterest,
+      interestRate = interestRate,
+      lastInterestCompoundTime = lastInterestCompoundTime,
+      stabilityFundAddress = Addresses.STABILITY_FUND_ADDRESS,
+      underlyingBalance = sp.nat(0)
+    )
+    scenario += tester
+    
     # WHEN interest is accrued after 2.5 periods
-    scenario += pool.DEBUG_accrueInterest(sp.unit).run(
+    scenario += tester.testContractEntryPoint(sp.unit).run(
       now = sp.timestamp(150) # 2.5 periods
     )
 
     # THEN the last interest update time is floored.
-    scenario.verify(pool.data.lastInterestCompoundTime == sp.timestamp(Constants.SECONDS_PER_COMPOUND * 2))    
+    scenario.verify(tester.data.lastInterestCompoundTime == sp.timestamp(Constants.SECONDS_PER_COMPOUND * 2))    
 
   @sp.add_test(name="accrueInterest - calculates accrued interest for one period")
   def test():
     # GIVEN a Pool contract
     scenario = sp.test_scenario()
 
+    interestRate = sp.nat(100000000000000000)
     initialValue = Constants.PRECISION
+    lastInterestCompoundTime = sp.timestamp(0)
     pool = PoolContract(
-      interestRate = sp.nat(100000000000000000),
+      interestRate = interestRate,
       underlyingBalance = initialValue,
-      lastInterestCompoundTime = sp.timestamp(0)
+      lastInterestCompoundTime = lastInterestCompoundTime
     )
     scenario += pool
 
+    # AND a tester.
+    tester = Tester(
+      pool.accrueInterest,
+      interestRate = interestRate,
+      lastInterestCompoundTime = lastInterestCompoundTime,
+      stabilityFundAddress = Addresses.STABILITY_FUND_ADDRESS,
+      underlyingBalance = initialValue
+    )
+    scenario += tester
+
     # WHEN interest is accrued after 1 compound period.
-    scenario += pool.DEBUG_accrueInterest(sp.unit).run(
+    scenario += tester.testContractEntryPoint(sp.unit).run(
       now = sp.timestamp(Constants.SECONDS_PER_COMPOUND)
     )
 
     # THEN the the accrued interest is calculated correctly.
-    scenario.verify(pool.data.debug_accrueInterest.open_some() == sp.as_nat(1100000000000000000 - initialValue))
+    scenario.verify(tester.data.result.open_some() == sp.as_nat(1100000000000000000 - initialValue))
 
   @sp.add_test(name="accrueInterest - calculates accrued interest for two periods")
   def test():
     # GIVEN a Pool contract
     scenario = sp.test_scenario()
 
+    interestRate = sp.nat(100000000000000000)
     initialValue = Constants.PRECISION
+    lastInterestCompoundTime = sp.timestamp(0)
     pool = PoolContract(
-      interestRate = sp.nat(100000000000000000),
+      interestRate = interestRate,
       underlyingBalance = initialValue,
-      lastInterestCompoundTime = sp.timestamp(0)
+      lastInterestCompoundTime = lastInterestCompoundTime
     )
     scenario += pool
 
+    # AND a tester.
+    tester = Tester(
+      pool.accrueInterest,
+      interestRate = interestRate,
+      lastInterestCompoundTime = lastInterestCompoundTime,
+      stabilityFundAddress = Addresses.STABILITY_FUND_ADDRESS,
+      underlyingBalance = initialValue
+    )
+    scenario += tester
+
     # WHEN interest is accrued after 2 compound periods.
-    scenario += pool.DEBUG_accrueInterest(sp.unit).run(
+    scenario += tester.testContractEntryPoint(sp.unit).run(
       now = sp.timestamp(Constants.SECONDS_PER_COMPOUND * 2)
     )
 
     # THEN the the accrued interest is calculated correctly.
-    scenario.verify(pool.data.debug_accrueInterest.open_some() == sp.as_nat(1200000000000000000 - initialValue))
+    scenario.verify(tester.data.result.open_some() == sp.as_nat(1200000000000000000 - initialValue))
 
   @sp.add_test(name="accrueInterest - calculates accrued interest for one period with nonzero start")
   def test():
     # GIVEN a Pool contract with a previous interest update time.
     scenario = sp.test_scenario()
 
+    interestRate = sp.nat(100000000000000000)
     initialValue = 1100000000000000000
+    lastInterestCompoundTime = sp.timestamp(Constants.SECONDS_PER_COMPOUND)
     pool = PoolContract(
-      interestRate = sp.nat(100000000000000000),
+      interestRate = interestRate,
       underlyingBalance = initialValue,
-      lastInterestCompoundTime = sp.timestamp(Constants.SECONDS_PER_COMPOUND)
+      lastInterestCompoundTime = lastInterestCompoundTime
     )
     scenario += pool
 
+    # AND a tester.
+    tester = Tester(
+      pool.accrueInterest,
+      interestRate = interestRate,
+      lastInterestCompoundTime = lastInterestCompoundTime,
+      stabilityFundAddress = Addresses.STABILITY_FUND_ADDRESS,
+      underlyingBalance = initialValue
+    )
+    scenario += tester
+
     # WHEN interest is accrued after 1 compound period.
-    scenario += pool.DEBUG_accrueInterest(sp.unit).run(
+    scenario += tester.testContractEntryPoint(sp.unit).run(
       now = sp.timestamp(Constants.SECONDS_PER_COMPOUND * 2)
     )
 
     # THEN the the accrued interest is calculated correctly.
-    scenario.verify(pool.data.debug_accrueInterest.open_some() == sp.as_nat(1210000000000000000 - initialValue))
+    scenario.verify(tester.data.result.open_some() == sp.as_nat(1210000000000000000 - initialValue))
 
   @sp.add_test(name="accrueInterest - calculates accrued interest by flooring partial periods")
   def test():
     # GIVEN a Pool contract
     scenario = sp.test_scenario()
 
+    interestRate = sp.nat(100000000000000000)
     initialValue = Constants.PRECISION
+    lastInterestCompoundTime = sp.timestamp(0)
     pool = PoolContract(
       interestRate = sp.nat(100000000000000000),
       underlyingBalance = initialValue,
-      lastInterestCompoundTime = sp.timestamp(0)
+      lastInterestCompoundTime = lastInterestCompoundTime
     )
     scenario += pool
 
+    # AND a tester.
+    tester = Tester(
+      pool.accrueInterest,
+      interestRate = interestRate,
+      lastInterestCompoundTime = lastInterestCompoundTime,
+      stabilityFundAddress = Addresses.STABILITY_FUND_ADDRESS,
+      underlyingBalance = initialValue
+    )
+    scenario += tester
+
     # WHEN interest is accrued after 2.5 periods
-    scenario += pool.DEBUG_accrueInterest(sp.unit).run(
+    scenario += tester.testContractEntryPoint(sp.unit).run(
       now = sp.timestamp(150) # 2.5 periods
     )
 
     # THEN the the accrued interest is calculated correctly.
-    scenario.verify(pool.data.debug_accrueInterest.open_some() == sp.as_nat(1200000000000000000 - initialValue))
+    scenario.verify(tester.data.result.open_some() == sp.as_nat(1200000000000000000 - initialValue))
 
   @sp.add_test(name="accrueInterest - retrieves stability fees for one period")
   def test():
@@ -617,11 +728,13 @@ if __name__ == "__main__":
     scenario += token
 
     # AND a Pool contract
+    interestRate = sp.nat(100000000000000000)
     initialValue = Constants.PRECISION
+    lastInterestCompoundTime = sp.timestamp(0)
     pool = PoolContract(
-      interestRate = sp.nat(100000000000000000),
+      interestRate = interestRate,
       underlyingBalance = initialValue,
-      lastInterestCompoundTime = sp.timestamp(0)
+      lastInterestCompoundTime = lastInterestCompoundTime
     )
     scenario += pool
 
@@ -631,21 +744,6 @@ if __name__ == "__main__":
       tokenContractAddress = token.address,
     )
     scenario += stabilityFund
-
-    # AND the pool contract is wired to the stability fund.
-    scenario += pool.updateStabilityFundAddress(stabilityFund.address).run(
-      sender = Addresses.GOVERNOR_ADDRESS
-    )
-
-    # AND the pool has the initial underlying balance.
-    scenario += token.mint(
-      sp.record(
-        address = pool.address,
-        value = initialValue
-      )
-    ).run(
-      sender = Addresses.ADMIN_ADDRESS
-    )
 
     # AND the stability fund has many tokens
     scenario += token.mint(
@@ -657,13 +755,40 @@ if __name__ == "__main__":
       sender = Addresses.ADMIN_ADDRESS
     )
 
+    # AND a tester.
+    tester = Tester(
+      pool.accrueInterest,
+      interestRate = interestRate,
+      lastInterestCompoundTime = lastInterestCompoundTime,
+      stabilityFundAddress = stabilityFund.address,
+      underlyingBalance = initialValue
+    )
+    scenario += tester
+
+    # AND the tester has the initial underlying balance.
+    scenario += token.mint(
+      sp.record(
+        address = tester.address,
+        value = initialValue
+      )
+    ).run(
+      sender = Addresses.ADMIN_ADDRESS
+    )
+
+    # AND the stability fund is wired to the tester.
+    scenario += stabilityFund.setSavingsAccountContract(
+      tester.address
+    ).run(
+      sender = Addresses.GOVERNOR_ADDRESS
+    )
+
     # WHEN interest is accrued after 1 compound period.
-    scenario += pool.DEBUG_accrueInterest(sp.unit).run(
+    scenario += tester.testContractEntryPoint(sp.unit).run(
       now = sp.timestamp(Constants.SECONDS_PER_COMPOUND)
     )
 
     # THEN the contract has the right number of tokens.
-    scenario.verify(token.data.balances[pool.address].balance == 1100000000000000000)
+    scenario.verify(token.data.balances[tester.address].balance == 1100000000000000000)
 
   @sp.add_test(name="accrueInterest - retrieves stability fees for two periods")
   def test():
@@ -676,11 +801,13 @@ if __name__ == "__main__":
     scenario += token
 
     # AND a Pool contract
+    interestRate = sp.nat(100000000000000000)
     initialValue = Constants.PRECISION
+    lastInterestCompoundTime = sp.timestamp(0)
     pool = PoolContract(
-      interestRate = sp.nat(100000000000000000),
+      interestRate = interestRate,
       underlyingBalance = initialValue,
-      lastInterestCompoundTime = sp.timestamp(0)
+      lastInterestCompoundTime = lastInterestCompoundTime
     )
     scenario += pool
 
@@ -690,21 +817,6 @@ if __name__ == "__main__":
       tokenContractAddress = token.address,
     )
     scenario += stabilityFund
-
-    # AND the pool contract is wired to the stability fund.
-    scenario += pool.updateStabilityFundAddress(stabilityFund.address).run(
-      sender = Addresses.GOVERNOR_ADDRESS
-    )
-
-    # AND the pool has the initial underlying balance.
-    scenario += token.mint(
-      sp.record(
-        address = pool.address,
-        value = initialValue
-      )
-    ).run(
-      sender = Addresses.ADMIN_ADDRESS
-    )
 
     # AND the stability fund has many tokens
     scenario += token.mint(
@@ -716,13 +828,40 @@ if __name__ == "__main__":
       sender = Addresses.ADMIN_ADDRESS
     )
 
+    # AND a tester.
+    tester = Tester(
+      pool.accrueInterest,
+      interestRate = interestRate,
+      lastInterestCompoundTime = lastInterestCompoundTime,
+      stabilityFundAddress = stabilityFund.address,
+      underlyingBalance = initialValue
+    )
+    scenario += tester
+
+    # AND the tester has the initial underlying balance.
+    scenario += token.mint(
+      sp.record(
+        address = tester.address,
+        value = initialValue
+      )
+    ).run(
+      sender = Addresses.ADMIN_ADDRESS
+    )
+
+    # AND the stability fund is wired to the tester.
+    scenario += stabilityFund.setSavingsAccountContract(
+      tester.address
+    ).run(
+      sender = Addresses.GOVERNOR_ADDRESS
+    )
+
     # WHEN interest is accrued after 2 compound periods.
-    scenario += pool.DEBUG_accrueInterest(sp.unit).run(
+    scenario += tester.testContractEntryPoint(sp.unit).run(
       now = sp.timestamp(2 * Constants.SECONDS_PER_COMPOUND)
     )
 
     # THEN the contract has the right number of tokens.
-    scenario.verify(token.data.balances[pool.address].balance == 1200000000000000000)    
+    scenario.verify(token.data.balances[tester.address].balance == 1200000000000000000)    
 
   @sp.add_test(name="accrueInterest - retrieves stability fees for one periods starting at nonzero")
   def test():
@@ -734,12 +873,14 @@ if __name__ == "__main__":
     )
     scenario += token
 
-    # AND a Pool contract
+    # AND a Pool contract 
+    interestRate = sp.nat(100000000000000000)    
     initialValue = sp.nat(1100000000000000000)
+    lastInterestCompoundTime = sp.timestamp(Constants.SECONDS_PER_COMPOUND)
     pool = PoolContract(
-      interestRate = sp.nat(100000000000000000),
+      interestRate = interestRate,
       underlyingBalance = initialValue,
-      lastInterestCompoundTime = sp.timestamp(Constants.SECONDS_PER_COMPOUND)
+      lastInterestCompoundTime = lastInterestCompoundTime
     )
     scenario += pool
 
@@ -749,21 +890,6 @@ if __name__ == "__main__":
       tokenContractAddress = token.address,
     )
     scenario += stabilityFund
-
-    # AND the pool contract is wired to the stability fund.
-    scenario += pool.updateStabilityFundAddress(stabilityFund.address).run(
-      sender = Addresses.GOVERNOR_ADDRESS
-    )
-
-    # AND the pool has the initial underlying balance.
-    scenario += token.mint(
-      sp.record(
-        address = pool.address,
-        value = initialValue
-      )
-    ).run(
-      sender = Addresses.ADMIN_ADDRESS
-    )
 
     # AND the stability fund has many tokens
     scenario += token.mint(
@@ -775,13 +901,40 @@ if __name__ == "__main__":
       sender = Addresses.ADMIN_ADDRESS
     )
 
+    # AND a tester.
+    tester = Tester(
+      pool.accrueInterest,
+      interestRate = interestRate,
+      lastInterestCompoundTime = lastInterestCompoundTime,
+      stabilityFundAddress = stabilityFund.address,
+      underlyingBalance = initialValue
+    )
+    scenario += tester
+
+    # AND the tester has the initial underlying balance.
+    scenario += token.mint(
+      sp.record(
+        address = tester.address,
+        value = initialValue
+      )
+    ).run(
+      sender = Addresses.ADMIN_ADDRESS
+    )
+
+    # AND the stability fund is wired to the tester.
+    scenario += stabilityFund.setSavingsAccountContract(
+      tester.address
+    ).run(
+      sender = Addresses.GOVERNOR_ADDRESS
+    )
+
     # WHEN interest is accrued after the second compound period.
-    scenario += pool.DEBUG_accrueInterest(sp.unit).run(
+    scenario += tester.testContractEntryPoint(sp.unit).run(
       now = sp.timestamp(2 * Constants.SECONDS_PER_COMPOUND)
     )
 
     # THEN the contract has the right number of tokens.
-    scenario.verify(token.data.balances[pool.address].balance == 1210000000000000000)        
+    scenario.verify(token.data.balances[tester.address].balance == 1210000000000000000)        
 
   @sp.add_test(name="accrueInterest - correctly floors partial periods")
   def test():
@@ -794,11 +947,13 @@ if __name__ == "__main__":
     scenario += token
 
     # AND a Pool contract
+    interestRate = sp.nat(100000000000000000)
     initialValue = Constants.PRECISION
+    lastInterestCompoundTime = sp.timestamp(0)    
     pool = PoolContract(
-      interestRate = sp.nat(100000000000000000),
+      interestRate = interestRate,
       underlyingBalance = initialValue,
-      lastInterestCompoundTime = sp.timestamp(0)
+      lastInterestCompoundTime = lastInterestCompoundTime
     )
     scenario += pool
 
@@ -808,21 +963,6 @@ if __name__ == "__main__":
       tokenContractAddress = token.address,
     )
     scenario += stabilityFund
-
-    # AND the pool contract is wired to the stability fund.
-    scenario += pool.updateStabilityFundAddress(stabilityFund.address).run(
-      sender = Addresses.GOVERNOR_ADDRESS
-    )
-
-    # AND the pool has the initial underlying balance.
-    scenario += token.mint(
-      sp.record(
-        address = pool.address,
-        value = initialValue
-      )
-    ).run(
-      sender = Addresses.ADMIN_ADDRESS
-    )
 
     # AND the stability fund has many tokens
     scenario += token.mint(
@@ -834,13 +974,40 @@ if __name__ == "__main__":
       sender = Addresses.ADMIN_ADDRESS
     )
 
+    # AND a tester.
+    tester = Tester(
+      pool.accrueInterest,
+      interestRate = interestRate,
+      lastInterestCompoundTime = lastInterestCompoundTime,
+      stabilityFundAddress = stabilityFund.address,
+      underlyingBalance = initialValue
+    )
+    scenario += tester
+
+    # AND the tester has the initial underlying balance.
+    scenario += token.mint(
+      sp.record(
+        address = tester.address,
+        value = initialValue
+      )
+    ).run(
+      sender = Addresses.ADMIN_ADDRESS
+    )
+
+    # AND the stability fund is wired to the tester.
+    scenario += stabilityFund.setSavingsAccountContract(
+      tester.address
+    ).run(
+      sender = Addresses.GOVERNOR_ADDRESS
+    )
+
     # WHEN interest is accrued after 2 and a half compound periods.
-    scenario += pool.DEBUG_accrueInterest(sp.unit).run(
+    scenario += tester.testContractEntryPoint(sp.unit).run(
       now = sp.timestamp(150) # 2.5 periods
     )
 
     # THEN the contract has the right number of tokens.
-    scenario.verify(token.data.balances[pool.address].balance == 1200000000000000000)    
+    scenario.verify(token.data.balances[tester.address].balance == 1200000000000000000)    
 
   ################################################################
   # updateContractMetadata
