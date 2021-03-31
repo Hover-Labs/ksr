@@ -126,7 +126,7 @@ class PoolContract(Token.FA12):
       savedState_tokensToDeposit = savedState_tokensToDeposit, # Amount of tokens to deposit, populated when state = WAITING_DEPOSIT
       savedState_depositor = savedState_depositor, # Account depositing the tokens, populated when state = WAITING_DEPOSIT
 
-        # Debugging
+      # Debugging
       debug_accrueInterest = sp.none,
     )
 
@@ -388,6 +388,12 @@ class PoolContract(Token.FA12):
   # Helpers
   ################################################################
 
+  # This entrypoint should never be called.
+  #
+  # It exposes `accrueInterest` for testing. `accrueInterest` is idempotent though
+  # so there's no harm is someone wants to call it. 
+  # 
+  # The result of `accrueInterest` is saved in `debug_accrueInterest` for examination.
   @sp.entry_point
   def DEBUG_accrueInterest(self, unit): 
     self.data.debug_accrueInterest = sp.some(self.accrueInterest(sp.unit))
