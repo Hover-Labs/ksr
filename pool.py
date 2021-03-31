@@ -693,7 +693,7 @@ if __name__ == "__main__":
     initialValue = Constants.PRECISION
     lastInterestCompoundTime = sp.timestamp(0)
     pool = PoolContract(
-      interestRate = sp.nat(100000000000000000),
+      interestRate = interestRate,
       underlyingBalance = initialValue,
       lastInterestCompoundTime = lastInterestCompoundTime
     )
