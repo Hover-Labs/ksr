@@ -166,7 +166,6 @@ class PoolContract(Token.FA12):
     accruedInterest = self.accrueInterest(sp.unit)
 
     # Debit underlying balance by the amount of tokens that will be sent
-    # TODO(keefertaylor): Test.
     self.data.underlyingBalance = updatedBalance + accruedInterest + tokensToDeposit.value
 
     # Transfer tokens to this contract.
