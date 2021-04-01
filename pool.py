@@ -158,6 +158,7 @@ class PoolContract(Token.FA12):
     tokensToDeposit = sp.local('tokensToDeposit', self.data.savedState_tokensToDeposit.open_some())
     newTokens = sp.local('newTokens', tokensToDeposit.value * Constants.PRECISION)
     sp.if self.data.totalSupply != sp.nat(0):
+      # TODO(keefertaylor): Should this number get updated? 
       newUnderlyingBalance = sp.local('newUnderlyingBalance', updatedBalance + tokensToDeposit.value)
       fractionOfPoolOwnership = sp.local('fractionOfPoolOwnership', (tokensToDeposit.value * Constants.PRECISION) / newUnderlyingBalance.value)
       newTokens.value = ((fractionOfPoolOwnership.value * self.data.totalSupply) / (sp.as_nat(Constants.PRECISION - fractionOfPoolOwnership.value)))
