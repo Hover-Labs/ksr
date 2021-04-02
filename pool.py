@@ -154,18 +154,16 @@ class PoolContract(Token.FA12):
     # Validate state
     sp.verify(self.data.state == WAITING_DEPOSIT, "bad state")
 
+    # Calculate the newly accrued interest.
+    accruedInterest = self.accrueInterest(sp.unit)
+
     # Calculate the tokens to issue.
     tokensToDeposit = sp.local('tokensToDeposit', self.data.savedState_tokensToDeposit.open_some())
     newTokens = sp.local('newTokens', tokensToDeposit.value * Constants.PRECISION)
     sp.if self.data.totalSupply != sp.nat(0):
-      # TODO(keefertaylor): This value should include accumulated interest and needs to be tested.
-      # TODO(keefertaylor): This needs to be mirrored to redeem too.
       newUnderlyingBalance = sp.local('newUnderlyingBalance', updatedBalance + tokensToDeposit.value)
       fractionOfPoolOwnership = sp.local('fractionOfPoolOwnership', (tokensToDeposit.value * Constants.PRECISION) / newUnderlyingBalance.value)
       newTokens.value = ((fractionOfPoolOwnership.value * self.data.totalSupply) / (sp.as_nat(Constants.PRECISION - fractionOfPoolOwnership.value)))
-
-    # Calculate the newly accrued interest.
-    accruedInterest = self.accrueInterest(sp.unit)
 
     # Debit underlying balance by the amount of tokens that will be sent
     self.data.underlyingBalance = updatedBalance + accruedInterest + tokensToDeposit.value
@@ -234,16 +232,15 @@ class PoolContract(Token.FA12):
     # Validate state
     sp.verify(self.data.state == WAITING_REDEEM, "bad state")
 
-    # Calculate tokens to receive.
-    tokensToRedeem = sp.local('tokensToRedeem', self.data.savedState_tokensToRedeem.open_some())
-    fractionOfPoolOwnership = sp.local('fractionOfPoolOwnership', (tokensToRedeem.value * Constants.PRECISION) / self.data.totalSupply)
-    tokensToReceive = sp.local('tokensToReceive', (fractionOfPoolOwnership.value * updatedBalance) / Constants.PRECISION)
-
     # Calculate the newly accrued interest.
     accruedInterest = self.accrueInterest(sp.unit)
 
+    # Calculate tokens to receive.
+    tokensToRedeem = sp.local('tokensToRedeem', self.data.savedState_tokensToRedeem.open_some())
+    fractionOfPoolOwnership = sp.local('fractionOfPoolOwnership', (tokensToRedeem.value * Constants.PRECISION) / self.data.totalSupply)
+    tokensToReceive = sp.local('tokensToReceive', (fractionOfPoolOwnership.value * updatedBalance + accruedInterest) / Constants.PRECISION)
+
     # Debit underlying balance by the amount of tokens that will be sent
-    # TODO(keefertaylor): Test.
     self.data.underlyingBalance = sp.as_nat(updatedBalance + accruedInterest - tokensToReceive.value)
 
     # Burn the tokens being redeemed.
@@ -1500,7 +1497,7 @@ if __name__ == "__main__":
     )
 
     # AND Alice has tokens
-    aliceTokens = sp.nat(10)
+    aliceTokens = 10 * Constants.PRECISION  
     scenario += token.mint(
       sp.record(
         address = Addresses.ALICE_ADDRESS,
@@ -1520,6 +1517,27 @@ if __name__ == "__main__":
       sender = Addresses.ALICE_ADDRESS
     )
 
+    # AND BOB has tokens
+    bobTokens = 20 * Constants.PRECISION  
+    scenario += token.mint(
+      sp.record(
+        address = Addresses.BOB_ADDRESS,
+        value = bobTokens
+      )
+    ).run(
+      sender = Addresses.ADMIN_ADDRESS
+    )
+
+    # AND Bob has given the pool an allowance
+    scenario += token.approve(
+      sp.record(
+        spender = pool.address,
+        value = bobTokens
+      )
+    ).run(
+      sender = Addresses.BOB_ADDRESS
+    )
+
     # WHEN Alice deposits tokens in the contract after one compound period
     scenario += pool.deposit(
       aliceTokens
@@ -1537,30 +1555,27 @@ if __name__ == "__main__":
 
     # AND the pool has possession of the correct number of tokens.
     # Expected = initial balance + interest accrued + new tokens from alice.
-    expectedPoolTokens = aliceTokens + initialBalance + 100000000000000000
-    scenario.verify(token.data.balances[pool.address].balance == expectedPoolTokens)
-    scenario.verify(pool.data.underlyingBalance == expectedPoolTokens)
+    expectedPoolTokensAfterAliceDeposit = aliceTokens + initialBalance + 100000000000000000
+    scenario.verify(token.data.balances[pool.address].balance == expectedPoolTokensAfterAliceDeposit)
+    scenario.verify(pool.data.underlyingBalance == expectedPoolTokensAfterAliceDeposit)
+    scenario.show('expected alice tokens')
+    scenario.show(expectedPoolTokensAfterAliceDeposit)
 
-    # WHEN Alice withdraws her tokens before another compound periond
-    scenario += pool.redeem(
-      aliceTokens * Constants.PRECISION
+    # WHEN Bob deposits tokens in the contract after a second compound period.
+    scenario += pool.deposit(
+      bobTokens
     ).run(
-      sender = Addresses.ALICE_ADDRESS,
-      now = sp.timestamp(Constants.SECONDS_PER_COMPOUND + 1)
+      sender = Addresses.BOB_ADDRESS,
+      now = sp.timestamp(2 * Constants.SECONDS_PER_COMPOUND)
     )
 
-    # THEN all of Alice's LP tokens are burned
-    scenario.verify(pool.data.balances[Addresses.ALICE_ADDRESS].balance == sp.nat(0))
-
-    # AND Alice received all the tokens in the pool
-    scenario.verify(token.data.balances[Addresses.ALICE_ADDRESS].balance == expectedPoolTokens)
-
-    # AND the pool has no supply. 
-    scenario.verify(pool.data.totalSupply == sp.nat(0))
-
-    # AND the pool owns zero tokens
-    scenario.verify(token.data.balances[pool.address].balance == sp.nat(0))
-    scenario.verify(pool.data.underlyingBalance == sp.nat(0))
+    # THEN the pool accrues interest again.
+    # Expected tokens = tokens after alice deposited + 10% interest accrual + new tokens from Bob.
+    expectedPoolTokensAfterBobDeposit = (expectedPoolTokensAfterAliceDeposit + (expectedPoolTokensAfterAliceDeposit // 10)) + bobTokens # Accrue interest on Alice's tokens
+    scenario.show('expected bob tokens')
+    scenario.show(expectedPoolTokensAfterBobDeposit)
+    scenario.verify(token.data.balances[pool.address].balance == expectedPoolTokensAfterBobDeposit)
+    scenario.verify(pool.data.underlyingBalance == expectedPoolTokensAfterBobDeposit)
 
   @sp.add_test(name="deposit - can deposit from two accounts")
   def test():
