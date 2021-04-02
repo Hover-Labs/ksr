@@ -322,6 +322,20 @@ class PoolContract(Token.FA12):
     sp.transfer(tokenTransferParam, sp.mutez(0), transferHandle)
 
   ################################################################
+  # State Management
+  ################################################################
+
+  # Accrue interest.
+  # This entrypoint is only useful if you require interest to be pulled from
+  # the stability fund before you can redeem LP tokens.
+  #
+  # TODO(keefertaylor): Understand this phenomenon.
+  @sp.entry_point
+  def manuallyAccrueInterest(self, unit):
+    sp.set_type(unit, sp.TUnit)
+    self.data.underlyingBalance = self.data.underlyingBalance + self.accrueInterest(sp.unit)
+
+  ################################################################
   # Governance
   ################################################################
 
@@ -1011,6 +1025,78 @@ if __name__ == "__main__":
 
     # THEN the contract has the right number of tokens.
     scenario.verify(token.data.balances[tester.address].balance == 1200000000000000000)    
+
+  ################################################################
+  # manuallyAccrueInterest
+  ################################################################
+
+  @sp.add_test(name="manuallyAccrueInterest - accrues interest for one period")
+  def test():
+    scenario = sp.test_scenario()
+    
+    # GIVEN a token contract.
+    token = FA12.FA12(
+      admin = Addresses.ADMIN_ADDRESS
+    )
+    scenario += token
+
+    # AND a Pool contract
+    interestRate = sp.nat(100000000000000000)
+    lastInterestCompoundTime = sp.timestamp(0)
+    initialBalance = Constants.PRECISION
+    pool = PoolContract(
+      interestRate = interestRate,
+      lastInterestCompoundTime = lastInterestCompoundTime,
+      underlyingBalance = initialBalance,
+      tokenAddress = token.address
+    )
+    scenario += pool
+
+    # AND a stability fund contract.
+    stabilityFund = StabilityFund.StabilityFundContract(
+      savingsAccountContractAddress = pool.address,
+      tokenContractAddress = token.address,
+    )
+    scenario += stabilityFund
+
+    # AND the stability fund has many tokens
+    scenario += token.mint(
+      sp.record(
+        address = stabilityFund.address,
+        value = 1000000 * Constants.PRECISION
+      )
+    ).run(
+      sender = Addresses.ADMIN_ADDRESS
+    )
+
+    # AND the pool has the initial balance
+    scenario += token.mint(
+      sp.record(
+        address = pool.address,
+        value = initialBalance
+      )
+    ).run(
+      sender = Addresses.ADMIN_ADDRESS
+    )
+
+    # AND the pool is wired to the stabiility fund.
+    scenario += pool.updateStabilityFundAddress(stabilityFund.address).run(
+      sender = Addresses.GOVERNOR_ADDRESS
+    )
+
+    # WHEN interest is manually accrued after one compound period
+    scenario += pool.manuallyAccrueInterest(sp.unit).run(
+      now = sp.timestamp(Constants.SECONDS_PER_COMPOUND)
+    )
+
+    # THEN the underlying balance is updated.
+    scenario.verify(pool.data.underlyingBalance == initialBalance + (initialBalance // 10))
+
+    # AND the last compound time is updated.
+    scenario.verify(pool.data.lastInterestCompoundTime == sp.timestamp(Constants.SECONDS_PER_COMPOUND))
+
+    # AND tokens are transferred to the pool.
+    scenario.verify(token.data.balances[pool.address].balance == initialBalance + (initialBalance // 10))
 
   ################################################################
   # updateContractMetadata
