@@ -241,6 +241,7 @@ class PoolContract(Token.FA12):
     tokensToReceive = sp.local('tokensToReceive', (fractionOfPoolOwnership.value * updatedBalance + accruedInterest) / Constants.PRECISION)
 
     # Debit underlying balance by the amount of tokens that will be sent
+    # TODO(keefertaylor): Test.
     self.data.underlyingBalance = sp.as_nat(updatedBalance + accruedInterest - tokensToReceive.value)
 
     # Burn the tokens being redeemed.
