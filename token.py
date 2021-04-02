@@ -25,11 +25,6 @@ class FA12(sp.Contract):
     @sp.entry_point
     def transfer(self, params):
         sp.set_type(params, sp.TRecord(from_ = sp.TAddress, to_ = sp.TAddress, value = sp.TNat).layout(("from_ as from", ("to_ as to", "value"))))
-        sp.trace('transfer! to / from / value')
-        sp.trace(params.to_)
-        sp.trace(params.from_)
-        sp.trace(params.value)
-
         sp.verify(self.is_administrator(sp.sender) |
             (~self.is_paused() &
                 ((params.from_ == sp.sender) |
