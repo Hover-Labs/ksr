@@ -154,19 +154,18 @@ class PoolContract(Token.FA12):
     # Validate state
     sp.verify(self.data.state == WAITING_DEPOSIT, "bad state")
 
+    # Calculate the newly accrued interest.
+    accruedInterest = self.accrueInterest(sp.unit)
+
     # Calculate the tokens to issue.
     tokensToDeposit = sp.local('tokensToDeposit', self.data.savedState_tokensToDeposit.open_some())
     newTokens = sp.local('newTokens', tokensToDeposit.value * Constants.PRECISION)
     sp.if self.data.totalSupply != sp.nat(0):
-      newUnderlyingBalance = sp.local('newUnderlyingBalance', updatedBalance + tokensToDeposit.value)
+      newUnderlyingBalance = sp.local('newUnderlyingBalance', updatedBalance + accruedInterest + tokensToDeposit.value)
       fractionOfPoolOwnership = sp.local('fractionOfPoolOwnership', (tokensToDeposit.value * Constants.PRECISION) / newUnderlyingBalance.value)
       newTokens.value = ((fractionOfPoolOwnership.value * self.data.totalSupply) / (sp.as_nat(Constants.PRECISION - fractionOfPoolOwnership.value)))
 
-    # Calculate the newly accrued interest.
-    accruedInterest = self.accrueInterest(sp.unit)
-
     # Debit underlying balance by the amount of tokens that will be sent
-    # TODO(keefertaylor): Test.
     self.data.underlyingBalance = updatedBalance + accruedInterest + tokensToDeposit.value
 
     # Transfer tokens to this contract.
@@ -233,13 +232,13 @@ class PoolContract(Token.FA12):
     # Validate state
     sp.verify(self.data.state == WAITING_REDEEM, "bad state")
 
-    # Calculate tokens to receive.
-    tokensToRedeem = sp.local('tokensToRedeem', self.data.savedState_tokensToRedeem.open_some())
-    fractionOfPoolOwnership = sp.local('fractionOfPoolOwnership', (tokensToRedeem.value * Constants.PRECISION) / self.data.totalSupply)
-    tokensToReceive = sp.local('tokensToReceive', (fractionOfPoolOwnership.value * updatedBalance) / Constants.PRECISION)
-
     # Calculate the newly accrued interest.
     accruedInterest = self.accrueInterest(sp.unit)
+
+    # Calculate tokens to receive.
+    tokensToRedeem = sp.local('tokensToRedeem', self.data.savedState_tokensToRedeem.open_some())
+    fractionOfPoolOwnership = sp.local('fractionOfPoolOwnership', (tokensToRedeem.value * Constants.PRECISION) // self.data.totalSupply)
+    tokensToReceive = sp.local('tokensToReceive', (fractionOfPoolOwnership.value * updatedBalance + accruedInterest) / Constants.PRECISION)
 
     # Debit underlying balance by the amount of tokens that will be sent
     # TODO(keefertaylor): Test.
@@ -1445,6 +1444,150 @@ if __name__ == "__main__":
     # AND the pool has possession of the correct number of tokens.
     scenario.verify(token.data.balances[pool.address].balance == aliceTokens)
     scenario.verify(pool.data.underlyingBalance == aliceTokens)
+
+  @sp.add_test(name="deposit - accrues interest on deposit")
+  def test():
+    scenario = sp.test_scenario()
+
+    # GIVEN a token contract
+    token = FA12.FA12(
+      admin = Addresses.ADMIN_ADDRESS
+    )
+    scenario += token
+
+    # AND a pool contract with an interest rate.
+    initialBalance = Constants.PRECISION
+    pool = PoolContract(
+      interestRate = sp.nat(100000000000000000),
+      lastInterestCompoundTime = sp.timestamp(0),
+      underlyingBalance = initialBalance,
+      tokenAddress = token.address
+    )
+    scenario += pool
+
+    # AND the pool has the initial number of tokens.
+    scenario += token.mint(
+      sp.record(
+        address = pool.address,
+        value = initialBalance
+      )
+    ).run(
+      sender = Addresses.ADMIN_ADDRESS
+    )
+
+    # AND a stability fund contract
+    stabilityFund = StabilityFund.StabilityFundContract(
+      savingsAccountContractAddress = pool.address,
+      tokenContractAddress = token.address,
+    )
+    scenario += stabilityFund
+
+    # AND the stability fund has many tokens
+    scenario += token.mint(
+      sp.record(
+        address = stabilityFund.address,
+        value = 10000000 * Constants.PRECISION
+      )
+    ).run(
+      sender = Addresses.ADMIN_ADDRESS
+    )
+
+    # AND the pool is wired to the stability fund.
+    scenario += pool.updateStabilityFundAddress(stabilityFund.address).run(
+      sender = Addresses.GOVERNOR_ADDRESS
+    )
+
+    # AND Alice has tokens
+    aliceTokens = 10 * Constants.PRECISION  
+    scenario += token.mint(
+      sp.record(
+        address = Addresses.ALICE_ADDRESS,
+        value = aliceTokens
+      )
+    ).run(
+      sender = Addresses.ADMIN_ADDRESS
+    )
+
+    # AND Alice has given the pool an allowance
+    scenario += token.approve(
+      sp.record(
+        spender = pool.address,
+        value = aliceTokens
+      )
+    ).run(
+      sender = Addresses.ALICE_ADDRESS
+    )
+
+    # AND BOB has tokens
+    bobTokens = 20 * Constants.PRECISION  
+    scenario += token.mint(
+      sp.record(
+        address = Addresses.BOB_ADDRESS,
+        value = bobTokens
+      )
+    ).run(
+      sender = Addresses.ADMIN_ADDRESS
+    )
+
+    # AND Bob has given the pool an allowance
+    scenario += token.approve(
+      sp.record(
+        spender = pool.address,
+        value = bobTokens
+      )
+    ).run(
+      sender = Addresses.BOB_ADDRESS
+    )
+
+    # WHEN Alice deposits tokens in the contract after one compound period
+    scenario += pool.deposit(
+      aliceTokens
+    ).run(
+      sender = Addresses.ALICE_ADDRESS,
+      now = sp.timestamp(Constants.SECONDS_PER_COMPOUND)
+    )
+
+    # THEN Alice trades her tokens for LP tokens
+    scenario.verify(token.data.balances[Addresses.ALICE_ADDRESS].balance == sp.nat(0))
+    scenario.verify(pool.data.balances[Addresses.ALICE_ADDRESS].balance == aliceTokens * Constants.PRECISION)
+
+    # AND the total supply of tokens is as expected
+    scenario.verify(pool.data.totalSupply == aliceTokens * Constants.PRECISION)
+
+    # AND the pool has possession of the correct number of tokens.
+    # Expected = initial balance + interest accrued + new tokens from alice.
+    expectedPoolTokensAfterAliceDeposit = aliceTokens + initialBalance + 100000000000000000
+    scenario.verify(token.data.balances[pool.address].balance == expectedPoolTokensAfterAliceDeposit)
+    scenario.verify(pool.data.underlyingBalance == expectedPoolTokensAfterAliceDeposit)
+
+    # WHEN Bob deposits tokens in the contract after a second compound period.
+    scenario += pool.deposit(
+      bobTokens
+    ).run(
+      sender = Addresses.BOB_ADDRESS,
+      now = sp.timestamp(2 * Constants.SECONDS_PER_COMPOUND)
+    )
+
+    # THEN the pool accrues interest again.
+    # Expected tokens = tokens after alice deposited + 10% interest accrual + new tokens from Bob.
+    expectedPoolTokensAfterBobDeposit = (expectedPoolTokensAfterAliceDeposit + (expectedPoolTokensAfterAliceDeposit // 10)) + bobTokens # Accrue interest on Alice's tokens
+    scenario.verify(token.data.balances[pool.address].balance == expectedPoolTokensAfterBobDeposit)
+    scenario.verify(pool.data.underlyingBalance == expectedPoolTokensAfterBobDeposit)
+
+    # AND Bob and Alice have the right number of liquidity provider tokens
+    # Pool should have       3221000000000000000 tokens
+    #
+    # Alice should get about 1210000000000000000 tokens:
+    # = Initial + Alice Tokens + Two Compounds
+    # Bob should get about   2000000000000000000 tokens:
+    # = Bob Tokens
+    #
+    # Alice should own .379074821484011177 of the pool
+    # Bob should own .620925178515988822 of the pool
+    alicePoolOwnership = pool.data.balances[Addresses.ALICE_ADDRESS].balance * Constants.PRECISION / pool.data.totalSupply
+    bobPoolOwnership = pool.data.balances[Addresses.BOB_ADDRESS].balance * Constants.PRECISION / pool.data.totalSupply
+    scenario.verify(alicePoolOwnership == 379074821484011177)
+    scenario.verify(bobPoolOwnership == 620925178515988822)
 
   @sp.add_test(name="deposit - can deposit from two accounts")
   def test():
