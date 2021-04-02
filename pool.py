@@ -237,7 +237,7 @@ class PoolContract(Token.FA12):
 
     # Calculate tokens to receive.
     tokensToRedeem = sp.local('tokensToRedeem', self.data.savedState_tokensToRedeem.open_some())
-    fractionOfPoolOwnership = sp.local('fractionOfPoolOwnership', (tokensToRedeem.value * Constants.PRECISION) / self.data.totalSupply)
+    fractionOfPoolOwnership = sp.local('fractionOfPoolOwnership', (tokensToRedeem.value * Constants.PRECISION) // self.data.totalSupply)
     tokensToReceive = sp.local('tokensToReceive', (fractionOfPoolOwnership.value * updatedBalance + accruedInterest) / Constants.PRECISION)
 
     # Debit underlying balance by the amount of tokens that will be sent
@@ -1558,8 +1558,6 @@ if __name__ == "__main__":
     expectedPoolTokensAfterAliceDeposit = aliceTokens + initialBalance + 100000000000000000
     scenario.verify(token.data.balances[pool.address].balance == expectedPoolTokensAfterAliceDeposit)
     scenario.verify(pool.data.underlyingBalance == expectedPoolTokensAfterAliceDeposit)
-    scenario.show('expected alice tokens')
-    scenario.show(expectedPoolTokensAfterAliceDeposit)
 
     # WHEN Bob deposits tokens in the contract after a second compound period.
     scenario += pool.deposit(
@@ -1572,10 +1570,23 @@ if __name__ == "__main__":
     # THEN the pool accrues interest again.
     # Expected tokens = tokens after alice deposited + 10% interest accrual + new tokens from Bob.
     expectedPoolTokensAfterBobDeposit = (expectedPoolTokensAfterAliceDeposit + (expectedPoolTokensAfterAliceDeposit // 10)) + bobTokens # Accrue interest on Alice's tokens
-    scenario.show('expected bob tokens')
-    scenario.show(expectedPoolTokensAfterBobDeposit)
     scenario.verify(token.data.balances[pool.address].balance == expectedPoolTokensAfterBobDeposit)
     scenario.verify(pool.data.underlyingBalance == expectedPoolTokensAfterBobDeposit)
+
+    # AND Bob and Alice have the right number of liquidity provider tokens
+    # Pool should have       3221000000000000000 tokens
+    #
+    # Alice should get about 1210000000000000000 tokens:
+    # = Initial + Alice Tokens + Two Compounds
+    # Bob should get about   2000000000000000000 tokens:
+    # = Bob Tokens
+    #
+    # Alice should own .379074821484011177 of the pool
+    # Bob should own .620925178515988822 of the pool
+    alicePoolOwnership = pool.data.balances[Addresses.ALICE_ADDRESS].balance * Constants.PRECISION / pool.data.totalSupply
+    bobPoolOwnership = pool.data.balances[Addresses.BOB_ADDRESS].balance * Constants.PRECISION / pool.data.totalSupply
+    scenario.verify(alicePoolOwnership == 379074821484011177)
+    scenario.verify(bobPoolOwnership == 620925178515988822)
 
   @sp.add_test(name="deposit - can deposit from two accounts")
   def test():
