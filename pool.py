@@ -238,7 +238,7 @@ class PoolContract(Token.FA12):
     # Calculate tokens to receive.
     tokensToRedeem = sp.local('tokensToRedeem', self.data.savedState_tokensToRedeem.open_some())
     fractionOfPoolOwnership = sp.local('fractionOfPoolOwnership', (tokensToRedeem.value * Constants.PRECISION) // self.data.totalSupply)
-    tokensToReceive = sp.local('tokensToReceive', (fractionOfPoolOwnership.value * updatedBalance + accruedInterest) / Constants.PRECISION)
+    tokensToReceive = sp.local('tokensToReceive', (fractionOfPoolOwnership.value * (updatedBalance + accruedInterest)) / Constants.PRECISION)
 
     # Debit underlying balance by the amount of tokens that will be sent
     # TODO(keefertaylor): Test.
@@ -2297,6 +2297,144 @@ if __name__ == "__main__":
     scenario.verify(pool.data.state == IDLE)
     scenario.verify(pool.data.savedState_tokensToRedeem.is_some() == False)
     scenario.verify(pool.data.savedState_redeemer.is_some() == False)
+
+  @sp.add_test(name="redeem - accrues interest on redeem")
+  def test():
+    scenario = sp.test_scenario()
+
+    # GIVEN a token contract
+    token = FA12.FA12(
+      admin = Addresses.ADMIN_ADDRESS
+    )
+    scenario += token
+
+    # AND a pool contract with an interest rate.
+    pool = PoolContract(
+      interestRate = sp.nat(100000000000000000),
+      lastInterestCompoundTime = sp.timestamp(0),
+      underlyingBalance = sp.nat(0),
+      tokenAddress = token.address
+    )
+    scenario += pool
+
+    # AND a stability fund contract
+    stabilityFund = StabilityFund.StabilityFundContract(
+      savingsAccountContractAddress = pool.address,
+      tokenContractAddress = token.address,
+    )
+    scenario += stabilityFund
+
+    # AND the stability fund has many tokens
+    scenario += token.mint(
+      sp.record(
+        address = stabilityFund.address,
+        value = 1000000000000 * Constants.PRECISION
+      )
+    ).run(
+      sender = Addresses.ADMIN_ADDRESS
+    )
+
+    # AND the pool is wired to the stability fund.
+    scenario += pool.updateStabilityFundAddress(stabilityFund.address).run(
+      sender = Addresses.GOVERNOR_ADDRESS
+    )
+
+    # AND Alice has tokens
+    aliceTokens = 10 * Constants.PRECISION  
+    scenario += token.mint(
+      sp.record(
+        address = Addresses.ALICE_ADDRESS,
+        value = aliceTokens
+      )
+    ).run(
+      sender = Addresses.ADMIN_ADDRESS
+    )
+
+    # AND Alice has given the pool an allowance
+    scenario += token.approve(
+      sp.record(
+        spender = pool.address,
+        value = aliceTokens
+      )
+    ).run(
+      sender = Addresses.ALICE_ADDRESS
+    )
+
+    # AND BOB has tokens
+    bobTokens = 10 * Constants.PRECISION  
+    scenario += token.mint(
+      sp.record(
+        address = Addresses.BOB_ADDRESS,
+        value = bobTokens
+      )
+    ).run(
+      sender = Addresses.ADMIN_ADDRESS
+    )
+
+    # AND Bob has given the pool an allowance
+    scenario += token.approve(
+      sp.record(
+        spender = pool.address,
+        value = bobTokens
+      )
+    ).run(
+      sender = Addresses.BOB_ADDRESS
+    )
+
+    # AND Alice and Bob deposit tokens into the pool
+    scenario += pool.deposit(
+      aliceTokens
+    ).run(
+      now = sp.timestamp(1),
+      sender = Addresses.ALICE_ADDRESS
+    )
+
+    scenario += pool.deposit(
+      bobTokens
+    ).run(
+      now = sp.timestamp(2),
+      sender = Addresses.BOB_ADDRESS
+    )
+
+    # Sanity check, both Bob and Alice own equal chunks of the pool and the
+    # pool is the sum of their tokens.
+    scenario.verify(pool.data.balances[Addresses.ALICE_ADDRESS].balance == pool.data.balances[Addresses.BOB_ADDRESS].balance)
+    scenario.verify(token.data.balances[pool.address].balance == aliceTokens + bobTokens)
+
+    # WHEN Alice withdraws her tokens after one compound period
+    scenario += pool.redeem(
+      pool.data.balances[Addresses.ALICE_ADDRESS].balance 
+    ).run(
+      now = sp.timestamp(Constants.SECONDS_PER_COMPOUND),
+      sender = Addresses.ALICE_ADDRESS
+    )
+
+    # THEN Alice's LP tokens are burn and she receives one half of the interest payment. 
+    poolBalance = aliceTokens + bobTokens
+    interestPayment = poolBalance // 10
+    scenario.verify(pool.data.balances[Addresses.ALICE_ADDRESS].balance == sp.nat(0))
+    scenario.verify(token.data.balances[Addresses.ALICE_ADDRESS].balance == aliceTokens + (interestPayment / 2))
+
+    # AND the pool tracks the balance correctly. 
+    expectedRemainingTokensAfterAliceRedemption = bobTokens + (interestPayment / 2)
+    scenario.verify(pool.data.underlyingBalance == expectedRemainingTokensAfterAliceRedemption)
+    scenario.verify(token.data.balances[pool.address].balance == expectedRemainingTokensAfterAliceRedemption)
+
+    # WHEN Bob withdraws his tokens/
+    scenario += pool.redeem(
+      pool.data.balances[Addresses.BOB_ADDRESS].balance
+    ).run(
+      now = sp.timestamp(Constants.SECONDS_PER_COMPOUND + 1),
+      sender = Addresses.BOB_ADDRESS
+    )
+
+    # THEN Bob's LP tokens are burnt and he receives all the remaining tokens
+    scenario.verify(pool.data.balances[Addresses.BOB_ADDRESS].balance == sp.nat(0))
+    scenario.verify(token.data.balances[Addresses.BOB_ADDRESS].balance == bobTokens + (interestPayment / 2))
+
+    # AND the pool tracks the balance correctly. 
+    scenario.verify(pool.data.underlyingBalance == sp.nat(0))
+    scenario.verify(token.data.balances[pool.address].balance == sp.nat(0))
 
   @sp.add_test(name="redeem - can deposit and withdraw from one account")
   def test():
