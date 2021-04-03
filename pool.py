@@ -344,25 +344,25 @@ class PoolContract(Token.FA12):
   #   sp.set_type(unit, sp.TUnit)
   #   self.data.underlyingBalance = self.data.underlyingBalance + self.accrueInterest(sp.unit)
 
-  # ################################################################
-  # # Governance
-  # ################################################################
+  ################################################################
+  # Governance
+  ################################################################
 
-  # # Update the governor address.
-  # @sp.entry_point
-  # def updateGovernorAddress(self, newGovernorAddress):
-  #   sp.set_type(newGovernorAddress, sp.TAddress)
+  # Update the governor address.
+  @sp.entry_point
+  def updateGovernorAddress(self, newGovernorAddress):
+    sp.set_type(newGovernorAddress, sp.TAddress)
 
-  #   sp.verify(sp.sender == self.data.governorAddress, "not governor")
-  #   self.data.governorAddress = newGovernorAddress
+    sp.verify(sp.sender == self.data.governorAddress, "not governor")
+    self.data.governorAddress = newGovernorAddress
 
-  # # Update the stability fund address.
-  # @sp.entry_point
-  # def updateStabilityFundAddress(self, newStabilityFundAddress):
-  #   sp.set_type(newStabilityFundAddress, sp.TAddress)
+  # Update the stability fund address.
+  @sp.entry_point
+  def updateStabilityFundAddress(self, newStabilityFundAddress):
+    sp.set_type(newStabilityFundAddress, sp.TAddress)
 
-  #   sp.verify(sp.sender == self.data.governorAddress, "not governor")
-  #   self.data.stabilityFundAddress = newStabilityFundAddress   
+    sp.verify(sp.sender == self.data.governorAddress, "not governor")
+    self.data.stabilityFundAddress = newStabilityFundAddress   
 
   # # Update the interest rate.
   # @sp.entry_point
@@ -378,24 +378,24 @@ class PoolContract(Token.FA12):
   #   # Adjust rate
   #   self.data.interestRate = newInterestRate   
 
-  # # Update contract metadata
-  # @sp.entry_point	
-  # def updateContractMetadata(self, params):	
-  #   sp.set_type(params, sp.TPair(sp.TString, sp.TBytes))	
+  # Update contract metadata
+  @sp.entry_point	
+  def updateContractMetadata(self, params):	
+    sp.set_type(params, sp.TPair(sp.TString, sp.TBytes))	
 
-  #   sp.verify(sp.sender == self.data.governorAddress, "not governor")
+    sp.verify(sp.sender == self.data.governorAddress, "not governor")
 
-  #   key = sp.fst(params)
-  #   value = sp.snd(params)	
-  #   self.data.metadata[key] = value
+    key = sp.fst(params)
+    value = sp.snd(params)	
+    self.data.metadata[key] = value
 
-  # # Update token metadata
-  # @sp.entry_point	
-  # def updateTokenMetadata(self, params):	
-  #   sp.set_type(params, sp.TPair(sp.TNat, sp.TMap(sp.TString, sp.TBytes)))	
+  # Update token metadata
+  @sp.entry_point	
+  def updateTokenMetadata(self, params):	
+    sp.set_type(params, sp.TPair(sp.TNat, sp.TMap(sp.TString, sp.TBytes)))	
 
-  #   sp.verify(sp.sender == self.data.governorAddress, "not governor")
-  #   self.data.token_metadata[0] = params
+    sp.verify(sp.sender == self.data.governorAddress, "not governor")
+    self.data.token_metadata[0] = params
 
   # Rescue any XTZ that may have been sent to the contract.
   @sp.entry_point	
