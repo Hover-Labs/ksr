@@ -22,7 +22,7 @@ WAITING_DEPOSIT = 3
 
 Addresses = sp.import_script_from_url("file:./test-helpers/addresses.py")
 
-class PoolContract(sp.Contract): #Token.FA12):
+class PoolContract(Token.FA12):
   def __init__(
     self,
     
@@ -389,13 +389,13 @@ class PoolContract(sp.Contract): #Token.FA12):
   #   value = sp.snd(params)	
   #   self.data.metadata[key] = value
 
-  # Update token metadata
-  @sp.entry_point	
-  def updateTokenMetadata(self, params):	
-    sp.set_type(params, sp.TPair(sp.TNat, sp.TMap(sp.TString, sp.TBytes)))	
+  # # Update token metadata
+  # @sp.entry_point	
+  # def updateTokenMetadata(self, params):	
+  #   sp.set_type(params, sp.TPair(sp.TNat, sp.TMap(sp.TString, sp.TBytes)))	
 
-    sp.verify(sp.sender == self.data.governorAddress, "not governor")
-    self.data.token_metadata[0] = params
+  #   sp.verify(sp.sender == self.data.governorAddress, "not governor")
+  #   self.data.token_metadata[0] = params
 
   # Rescue any XTZ that may have been sent to the contract.
   @sp.entry_point	
@@ -1156,32 +1156,26 @@ if __name__ == "__main__":
     pool = PoolContract(
       governorAddress = Addresses.GOVERNOR_ADDRESS,
     )
-  
     xtzAmount = sp.tez(10)
     pool.set_initial_balance(xtzAmount)
     scenario += pool
 
-    scenario.verify(pool.balance == xtzAmount)
+    # AND a dummy contract that will receive the XTZ
+    dummy = Dummy.DummyContract()
+    scenario += dummy
 
+    # WHEN rescue XTZ is called
+    scenario += pool.rescueXTZ(
+      sp.record(
+        destinationAddress = dummy.address
+      )
+    ).run(
+      sender = Addresses.GOVERNOR_ADDRESS,
+    )
 
-    # # AND a dummy contract that will receive the XTZ
-    # dummy = Dummy.DummyContract()
-    # scenario += dummy
-
-    # scenario.verify(pool.balance == xtzAmount)
-
-    # # WHEN rescue XTZ is called
-    # scenario += pool.rescueXTZ(
-    #   sp.record(
-    #     destinationAddress = dummy.address
-    #   )
-    # ).run(
-    #   sender = Addresses.GOVERNOR_ADDRESS,
-    # )
-
-    # # THEN XTZ is transferred.
-    # scenario.verify(pool.balance == sp.tez(0))
-    # scenario.verify(dummy.balance == xtzAmount)
+    # THEN XTZ is transferred.
+    scenario.verify(pool.balance == sp.tez(0))
+    scenario.verify(dummy.balance == xtzAmount)
 
   # ################################################################
   # # updateContractMetadata
