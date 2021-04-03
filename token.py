@@ -29,6 +29,10 @@ class FA12(sp.Contract):
             (~self.is_paused() &
                 ((params.from_ == sp.sender) |
                  (self.data.balances[params.from_].approvals[sp.sender] >= params.value))))
+
+        # CHANGED: Add from_ address if needed.
+        self.addAddressIfNecessary(params.from_)
+
         self.addAddressIfNecessary(params.to_)
         sp.verify(self.data.balances[params.from_].balance >= params.value)
         self.data.balances[params.from_].balance = sp.as_nat(self.data.balances[params.from_].balance - params.value)
@@ -63,7 +67,11 @@ class FA12(sp.Contract):
 
     @sp.view(sp.TNat)
     def getAllowance(self, params):
-        sp.result(self.data.balances[params.owner].approvals[params.spender])
+        # CHANGED: Add address if needed.
+        self.addAddressIfNecessary(sp.sender)
+
+        # CHANGED: Default to zero.
+        sp.result(self.data.balances[params.owner].approvals.get(params.spender, sp.nat(0)))
 
     @sp.view(sp.TNat)
     def getTotalSupply(self, params):
