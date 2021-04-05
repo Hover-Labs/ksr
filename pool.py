@@ -397,6 +397,16 @@ class PoolContract(Token.FA12):
     sp.verify(sp.sender == self.data.governorAddress, "not governor")
     self.data.token_metadata[0] = params
 
+  # Rescue any XTZ that may have been sent to the contract.
+  @sp.entry_point	
+  def rescueXTZ(self, params):
+    sp.set_type(params, sp.TRecord(destinationAddress = sp.TAddress).layout("destinationAddress"))
+
+    # Verify the requester is the governor.
+    sp.verify(sp.sender == self.data.governorAddress, "NOT_GOVERNOR")
+
+    sp.send(params.destinationAddress, sp.balance)    
+
   ################################################################
   # Helpers
   ################################################################
@@ -1106,6 +1116,63 @@ if __name__ == "__main__":
 
     # AND tokens are transferred to the pool.
     scenario.verify(token.data.balances[pool.address].balance == initialBalance + (initialBalance // 10))
+
+  ################################################################
+  # rescueXTZ
+  ################################################################
+
+  @sp.add_test(name="rescueXTZ - fails if not called by governor")
+  def test():
+    scenario = sp.test_scenario()
+
+    # GIVEN a pool contract
+    pool = PoolContract()
+
+    # AND the contract has some XTZ
+    xtzAmount = sp.tez(10)
+    pool.set_initial_balance(xtzAmount)
+    scenario += pool
+
+    # WHEN rescue XTZ is called by someone other than the governor.
+    # THEN the call fails.
+    notGovernor = Addresses.NULL_ADDRESS
+    scenario += pool.rescueXTZ(
+      sp.record(
+        destinationAddress = Addresses.ALICE_ADDRESS
+      )
+    ).run(
+      sender = notGovernor,
+      valid = False
+    )
+
+  @sp.add_test(name="rescueXTZ - rescues XTZ")
+  def test():
+    scenario = sp.test_scenario()
+
+    # GIVEN a pool contract
+    pool = PoolContract(
+      governorAddress = Addresses.GOVERNOR_ADDRESS,
+    )
+    xtzAmount = sp.tez(10)
+    pool.set_initial_balance(xtzAmount)
+    scenario += pool
+
+    # AND a dummy contract that will receive the XTZ
+    dummy = Dummy.DummyContract()
+    scenario += dummy
+
+    # WHEN rescue XTZ is called
+    scenario += pool.rescueXTZ(
+      sp.record(
+        destinationAddress = dummy.address
+      )
+    ).run(
+      sender = Addresses.GOVERNOR_ADDRESS,
+    )
+
+    # THEN XTZ is transferred.
+    scenario.verify(pool.balance == sp.tez(0))
+    scenario.verify(dummy.balance == xtzAmount)
 
   ################################################################
   # updateContractMetadata
