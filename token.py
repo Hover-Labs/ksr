@@ -68,7 +68,7 @@ class FA12(sp.Contract):
     @sp.view(sp.TNat)
     def getAllowance(self, params):
         # CHANGED: Add address if needed.
-        self.addAddressIfNecessary(params.owner)
+        self.addAddressIfNecessary(sp.sender)
 
         # CHANGED: Default to zero.
         sp.result(self.data.balances[params.owner].approvals.get(params.spender, sp.nat(0)))
