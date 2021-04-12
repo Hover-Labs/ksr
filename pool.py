@@ -73,10 +73,8 @@ class PoolContract(Token.FA12):
       tkey = sp.TNat,
       tvalue = sp.TPair(sp.TNat, sp.TMap(sp.TString, sp.TBytes))
     )
-        
-    # Hexadecimal representation of:
-    # { "name": "Interest Bearing kUSD",  "description": "Interest Bearing kUSD",  "authors": ["Hover Labs <hello@hover.engineering>"],  "homepage":  "https://kolibri.finance" }
-    metadata_data = sp.bytes('0x7b20226e616d65223a2022496e7465726573742042656172696e67206b555344222c2020226465736372697074696f6e223a2022496e7465726573742042656172696e67206b555344222c202022617574686f7273223a205b22486f766572204c616273203c68656c6c6f40686f7665722e656e67696e656572696e673e225d2c202022686f6d6570616765223a20202268747470733a2f2f6b6f6c696272692e66696e616e636522207d')
+
+    metadata_data = sp.bytes_of_string('{ "name": "Interest Bearing kUSD",  "description": "Interest Bearing kUSD",  "authors": ["Hover Labs <hello@hover.engineering>"],  "homepage":  "https://kolibri.finance", "interfaces": [ "TZIP-007-2021-01-29"] }')
     metadata = sp.big_map(
       l = {
         "": sp.bytes('0x74657a6f732d73746f726167653a64617461'), # "tezos-storage:data"
